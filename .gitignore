@@ -3,4 +3,6 @@ variables.env
 .mirror/
 *.db
 *.log
-models/
+router_models/
+*.onnx
+*.onnx.json
