@@ -1,4 +1,6 @@
+import json
 import sys
+from pathlib import Path
 import dotenv
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout,
@@ -6,8 +8,19 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, QTimer
 
-from ai.llm import preload_models
-from ai.stt import run_stt
+# AI is optional — the mirror runs as a display-only device without it.
+# Run install_ai.sh to add voice control.
+try:
+    from ai.llm import preload_models
+    from ai.stt import run_stt, set_wake_word
+    _AI_AVAILABLE = True
+except Exception as _ai_err:
+    print(f"[AI] voice pipeline disabled ({_ai_err})")
+    print("[AI] run  bash install_ai.sh  to enable voice control")
+    _AI_AVAILABLE    = False
+    preload_models   = lambda: None
+    run_stt          = lambda **kw: None
+    def set_wake_word(name: str) -> None: pass
 from ui.terminal import Terminal, LogStream
 from ui.clock_widget import ClockWidget
 from ui.calendar_widget import CalendarWidget
@@ -18,9 +31,49 @@ from ui.system_info_widget import SystemInfoWidget
 from ui.next_up_widget import NextUpWidget
 from ui.music_widget import MusicWidget
 from ui_backend.ui_control_backend import ui_bus
+from web_config.server import start as start_web_config
 
 
 dotenv.load_dotenv("variables.env")
+
+
+def _load_settings() -> dict:
+    defaults: dict = {
+        "mirror_name": "MILLER",
+        "calendar_days": 7,
+        "widgets": {
+            "terminal": True, "calendar": True, "tasks": True,
+            "clock":    True, "next_up":  True, "timer": True,
+            "alarm":    True, "system":   True,
+        },
+        "colors": {"text": "#dddddd", "mid": "#888888", "dim": "#444444"},
+        "layout": {
+            "top_left":    "terminal",
+            "bottom_left": "tasks",
+            "bottom_right": [
+                ["clock", "next_up"],
+                ["timer", "alarm"],
+                ["system"],
+            ],
+        },
+    }
+    p = Path(__file__).parent / "settings.json"
+    if not p.exists():
+        return defaults
+    try:
+        on_disk = json.loads(p.read_text())
+        merged  = dict(defaults)
+        merged.update({k: v for k, v in on_disk.items()
+                       if k not in ("widgets", "layout")})
+        merged["widgets"] = dict(defaults["widgets"])
+        merged["widgets"].update(on_disk.get("widgets", {}))
+        merged["colors"] = dict(defaults["colors"])
+        merged["colors"].update(on_disk.get("colors", {}))
+        merged["layout"] = dict(defaults["layout"])
+        merged["layout"].update(on_disk.get("layout", {}))
+        return merged
+    except Exception:
+        return defaults
 
 # ── STT worker thread ─────────────────────────────────────────────────────────
 
@@ -43,32 +96,68 @@ class MirrorWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Mirror")
         self.setStyleSheet("background-color: #000000;")
+        self._stt        = None
+        self._music_poll = None
+        self._rebuild_ui()
+
+    def _rebuild_ui(self) -> None:
+        """Rebuild the entire Qt layout from settings.json — called on startup and on save."""
+        from ui import theme as _theme
+
+        _s = _load_settings()
+        _theme.apply(_s.get("colors", {}))
+
+        # Stop old music poll before deleting old widgets
+        if self._music_poll is not None:
+            self._music_poll.stop()
+            self._music_poll = None
 
         root = QWidget()
-        self.setCentralWidget(root)
-
-        # 2×2 grid. The terminal is pinned to the top-left cell; the stretched
-        # row/column leave the other three corners free for future modules
-        # (clock, weather, calendar, …). Drop new widgets into (0,1)/(1,0)/(1,1).
         grid = QGridLayout(root)
         grid.setContentsMargins(28, 28, 28, 28)
         grid.setSpacing(28)
 
-        # ── top-left: terminal log ────────────────────────────────────────
-        self.terminal = Terminal(line_spacing=1.8)
-        grid.addWidget(self.terminal, 0, 0,
+        _layout = _s.get("layout", {})
+
+        # ── Create all widgets first ──────────────────────────────────────
+        self.terminal       = Terminal(line_spacing=1.8)
+        self.calendar_widget = CalendarWidget(days=_s["calendar_days"])
+        self.task_widget    = TaskWidget()
+        self.clock_widget   = ClockWidget()
+        self.next_up_widget = NextUpWidget()
+        self.timer_widget   = TimerWidget()
+        self.alarm_widget   = AlarmWidget()
+        self.system_widget  = SystemInfoWidget()
+        self.music_widget   = MusicWidget()
+
+        # System/Music share a stacked slot — auto-switches on AirPlay
+        self._sys_stack = QStackedWidget()
+        self._sys_stack.setFixedSize(440, 440)
+        sp = self._sys_stack.sizePolicy()
+        sp.setRetainSizeWhenHidden(True)
+        self._sys_stack.setSizePolicy(sp)
+        self._sys_stack.addWidget(self.system_widget)  # index 0
+        self._sys_stack.addWidget(self.music_widget)   # index 1
+
+        # Name → widget for layout-driven placement
+        _named = {
+            "terminal": self.terminal,
+            "tasks":    self.task_widget,
+            "clock":    self.clock_widget,
+            "next_up":  self.next_up_widget,
+            "timer":    self.timer_widget,
+            "alarm":    self.alarm_widget,
+            "system":   self._sys_stack,
+        }
+
+        # ── Place widgets according to layout settings ────────────────────
+        _tl = _named.get(_layout.get("top_left", "terminal"), self.terminal)
+        grid.addWidget(_tl, 0, 0,
                         Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-        # ── top-right: calendar — fills all remaining space in row 0 ─────
-        # No alignment flags: grid stretches the widget to fill the cell.
-        # Row 0 height is fixed by the terminal's setFixedSize(440); column 1
-        # has setColumnStretch(1,1) so the calendar spans the full right half.
-        self.calendar_widget = CalendarWidget(days=7)
         grid.addWidget(self.calendar_widget, 0, 1)
 
-        # ── accent row — spans both columns, absorbs the vertical gap ───────
-        # Row 1 gets all the stretch so the gap becomes intentional space
-        # with a hairline divider and the mirror name centred in it.
+        # Accent bar — mirror name between the two content rows
         from PySide6.QtWidgets import QFrame as _QFrame
         accent = QWidget()
         accent.setStyleSheet("background: transparent;")
@@ -83,33 +172,22 @@ class MirrorWindow(QMainWindow):
 
         from PySide6.QtWidgets import QLabel as _QL
         from PySide6.QtGui import QFont as _QF
-        _name = _QL("MILLER")
+        _name = _QL(_s["mirror_name"].upper())
         _name.setFont(_QF("Arial", 11, _QF.Weight.Light))
         _name.setStyleSheet(
-            "color: #d0d0d0; letter-spacing: 8px;"
+            f"color: {_theme.text}; letter-spacing: 8px;"
             "background: transparent; font-style: normal;")
 
         _al.addWidget(_line_l, 1)
         _al.addWidget(_name)
         _al.addWidget(_line_r, 1)
-        grid.addWidget(accent, 1, 0, 1, 2)   # span both columns
+        grid.addWidget(accent, 1, 0, 1, 2)
 
-        # ── bottom-left: task list ────────────────────────────────────────
-        self.task_widget = TaskWidget()
-        grid.addWidget(self.task_widget, 2, 0,
+        _bl = _named.get(_layout.get("bottom_left", "tasks"), self.task_widget)
+        grid.addWidget(_bl, 2, 0,
                         Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft)
 
-        # ── bottom-right: clock (fills space) + timer/alarm stacked ─────
-        right_row = QWidget()
-        right_layout = QHBoxLayout(right_row)
-        right_layout.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
-        right_layout.setSpacing(28)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Three symmetric 440×440 stacks:
-        # VBox[Clock, NextUp] | VBox[Timer, Alarm] | SysInfo
-        # 440 + 28 + 440 + 28 + 440 = 1376px (fits in column 1)
-
+        # Bottom-right cluster — column order driven by settings
         def _vstack(*widgets):
             w = QWidget()
             w.setStyleSheet("background: transparent;")
@@ -120,37 +198,28 @@ class MirrorWindow(QMainWindow):
                 v.addWidget(ww)
             return w
 
-        self.clock_widget   = ClockWidget()
-        self.next_up_widget = NextUpWidget()
-        right_layout.addWidget(_vstack(self.clock_widget, self.next_up_widget))
+        right_row = QWidget()
+        right_layout = QHBoxLayout(right_row)
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
+        right_layout.setSpacing(28)
+        right_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.timer_widget = TimerWidget()
-        self.alarm_widget = AlarmWidget()
-        right_layout.addWidget(_vstack(self.timer_widget, self.alarm_widget))
-
-        # System info and Music share the right-most 440×440 slot.
-        # Music takes over when AirPlay is active.
-        self.system_widget = SystemInfoWidget()
-        self.music_widget  = MusicWidget()
-
-        self._sys_stack = QStackedWidget()
-        self._sys_stack.setFixedSize(440, 440)
-        sp = self._sys_stack.sizePolicy()
-        sp.setRetainSizeWhenHidden(True)
-        self._sys_stack.setSizePolicy(sp)
-        self._sys_stack.addWidget(self.system_widget)  # index 0
-        self._sys_stack.addWidget(self.music_widget)   # index 1
-        right_layout.addWidget(self._sys_stack)
-
-        _music_poll = QTimer(self)
-        _music_poll.timeout.connect(self._sync_music_slot)
-        _music_poll.start(3_000)
+        _br_cols = _layout.get("bottom_right",
+                                [["clock", "next_up"], ["timer", "alarm"], ["system"]])
+        for col in _br_cols:
+            col_ws = [_named[n] for n in col if n in _named]
+            if not col_ws:
+                continue
+            right_layout.addWidget(col_ws[0] if len(col_ws) == 1 else _vstack(*col_ws))
 
         grid.addWidget(right_row, 2, 1,
                         Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
 
-        grid.setRowStretch(1, 1)   # accent row absorbs all extra vertical space
+        grid.setRowStretch(1, 1)
         grid.setColumnStretch(1, 1)
+
+        # Swap in the new central widget (Qt deletes the old one)
+        self.setCentralWidget(root)
 
         self._widgets: dict[str, QWidget] = {
             "terminal": self.terminal,
@@ -164,7 +233,18 @@ class MirrorWindow(QMainWindow):
             "next_up":  self.next_up_widget,
         }
 
-        self._stt = None
+        for _wname, _visible in _s["widgets"].items():
+            if not _visible:
+                _w = self._widgets.get(_wname)
+                if _w:
+                    _w.hide()
+
+        self._music_poll = QTimer(self)
+        self._music_poll.timeout.connect(self._sync_music_slot)
+        self._music_poll.start(3_000)
+
+        if _AI_AVAILABLE:
+            set_wake_word(_s["mirror_name"])
 
     def _sync_music_slot(self) -> None:
         """Switch the system-info slot to Music when AirPlay is active."""
@@ -179,6 +259,10 @@ class MirrorWindow(QMainWindow):
 
     def handle_ui_command(self, action: str, module: str,
                           location: str, size: str) -> None:
+        if action == "reload":
+            self._rebuild_ui()
+            print("[UI] layout rebuilt from settings")
+            return
         widget = self._widgets.get(module)
         if widget is None:
             print(f"[UI] unknown module: {module!r}")
@@ -187,6 +271,9 @@ class MirrorWindow(QMainWindow):
             widget.show()
         elif action == "hide":
             widget.hide()
+        elif action == "refresh":
+            if hasattr(widget, "_refresh"):
+                widget._refresh()
         print(f"[UI] {action} {module}"
               + (f" at {location}" if location else ""))
 
@@ -227,15 +314,20 @@ def main() -> None:
     log_stream.line.connect(window.append_log)   # queued across threads
     sys.stdout = log_stream
 
-    ui_bus.command.connect(window.handle_ui_command)
+    # QueuedConnection guarantees the slot runs on the Qt main thread
+    # even when ui_bus.command is emitted from the HTTP server's Python thread.
+    ui_bus.command.connect(window.handle_ui_command,
+                           Qt.ConnectionType.QueuedConnection)
+
+    start_web_config()
 
     window.showFullScreen()              # use .show() while developing
 
-    preload_models()                     # its logs stream into the terminal
-
-    stt = STTThread()
-    window.attach_stt(stt)
-    stt.start()
+    if _AI_AVAILABLE:
+        preload_models()
+        stt = STTThread()
+        window.attach_stt(stt)
+        stt.start()
 
     sys.exit(app.exec())                 # Qt event loop owns the main thread
 

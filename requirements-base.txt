@@ -1,0 +1,14 @@
+# Core mirror runtime — no AI, no AirPlay audio
+PySide6        # Qt desktop UI
+requests       # HTTP (Hue bridge, Home Assistant)
+psutil         # system_info_widget — CPU / RAM / temp / uptime
+caldav         # calendar_backend — iCloud CalDAV sync
+icalendar      # calendar_backend — iCal event parsing
+python-dotenv  # load variables.env
+
+# Optional — uncomment the systems you use
+# dbus-python  # music_widget AirPlay display (needs libdbus-1-dev + shairport-sync)
+# python-kasa  # smart plugs: Kasa / Tapo (by IP)
+# phue         # lights: Philips Hue bridge
+# lifxlan      # lights: LIFX (LAN discovery)
+# ddgs         # web search backend (no API key)

@@ -1,14 +1,14 @@
 # ── Core runtime ────────────────────────────────────────────────
-PySide6        # desktop UI / terminal widget
+PySide6        # Qt desktop UI — widgets, layouts, signals
 requests       # HTTP calls to the local Ollama server
 RealtimeSTT    # microphone speech-to-text (pulls in torch + faster-whisper)
-piper-tts      # the speaker of the whole operation
+piper-tts      # text-to-speech voice synthesis
 
 # ── Feature backends ────────────────────────────────────────────
 psutil         # system_info_backend — CPU / RAM / temp / uptime
 caldav         # calendar_backend — iCloud CalDAV client
 icalendar      # calendar_backend — parsing iCal event data
-python-dotenv  # load ICLOUD_* (and other) env vars from a .env file
+python-dotenv  # load variables.env (iCloud credentials, Hue bridge, etc.)
 dbus-python    # music_backend — MPRIS D-Bus client for shairport-sync
                #   requires system package: sudo apt install libdbus-1-dev
                #   run install_shairport.sh to set up shairport-sync itself
@@ -21,12 +21,12 @@ dbus-python    # music_backend — MPRIS D-Bus client for shairport-sync
 # ddgs         # DuckDuckGo search, no key, rate-limited
 
 # ── Optional: light control (light_backend) ─────────────────────
-# Pick the lib matching your hardware, then wire _dispatch.
+# Pick the lib matching your hardware, then wire _dispatch in light_backend.py.
 # phue         # Philips Hue bridge
 # lifxlan      # LIFX
 # (Home Assistant needs no extra package — it's a REST call via requests)
 
-# ── Optional: legacy LLM router (router.py) ─────────────────────
+# ── Optional: legacy LLM router (ai/router.py) ──────────────────
 # The default pipeline uses keyword_router.py and does NOT need these.
 # Uncomment only if you switch back to the fine-tuned router.
 # transformers

@@ -32,6 +32,18 @@ _STRIP_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(w) for w in STRIP_WORDS) + r")\b"
 )
 
+
+def set_wake_word(name: str) -> None:
+    """Update the wake word at runtime without restarting the STT loop."""
+    global HOT_WORDS, STRIP_WORDS, _STRIP_RE
+    word        = name.lower().strip()
+    HOT_WORDS   = frozenset({word})
+    STRIP_WORDS = frozenset({"hey", word})
+    _STRIP_RE   = re.compile(
+        r"\b(?:" + "|".join(re.escape(w) for w in STRIP_WORDS) + r")\b"
+    )
+    print(f"[Ear] wake word → '{word}'")
+
 # State labels emitted via on_state callback
 STATE_LISTENING  = "listening"
 STATE_PROCESSING = "processing"

@@ -4,6 +4,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QVBoxLayout, QLabel
 
 from ui.base_widget import BaseWidget, FitLabel, TRANS
+from ui import theme
 from ui_backend.task_backend import get_manager
 
 
@@ -12,7 +13,7 @@ class _TaskRow(FitLabel):
         super().__init__(max_pt=26)
         self._task      = task
         self._on_toggle = on_toggle
-        color = "#555555" if task.done else "#dddddd"
+        color = theme.dim if task.done else theme.text
         self.setStyleSheet(f"color: {color}; " + TRANS)
         self.setText(("✓ " if task.done else "○ ") + task.text)
 
@@ -32,7 +33,7 @@ class TaskWidget(BaseWidget):
 
         title = QLabel("TASKS")
         title.setFont(QFont("Arial", 11, QFont.Weight.Medium))
-        title.setStyleSheet("color: #444444; letter-spacing: 3px; " + TRANS)
+        title.setStyleSheet(f"color: {theme.dim}; letter-spacing: 3px; " + TRANS)
         self._layout.addWidget(title)
 
         poll = QTimer(self)

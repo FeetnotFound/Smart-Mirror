@@ -6,3 +6,10 @@ variables.env
 router_models/
 *.onnx
 *.onnx.json
+flash.sh
+setup_mirror_os.sh
+Dockerfile
+build_distro.sh
+.build/
+docker/
+dist/

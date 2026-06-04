@@ -20,8 +20,22 @@ def ts() -> str:
 # ─────────────────────────────────────────────
 #  Model configuration
 # ─────────────────────────────────────────────
-OLLAMA_URL        = "http://localhost:11434/api"
-MODEL_NAME        = "qwen3:1.7b"
+OLLAMA_URL         = "http://localhost:11434/api"
+MODEL_NAME_DEFAULT = "qwen3:1.7b"   # used when no model is saved in settings.json
+
+def get_model_name() -> str:
+    """Return the active Ollama model, reading live from settings.json."""
+    try:
+        import json
+        from pathlib import Path
+        s = json.loads((Path(__file__).parent / "settings.json").read_text())
+        return s.get("ai_model") or MODEL_NAME_DEFAULT
+    except Exception:
+        return MODEL_NAME_DEFAULT
+
+# Backward-compatible alias — static at import time; prefer get_model_name() for
+# anything that might change at runtime (model switching from the web config).
+MODEL_NAME = MODEL_NAME_DEFAULT
 LOCAL_ROUTER_PATH = "./models/router_models/qwen-local-instruct"
 BASE_MODEL_PATH   = "./models/router_models/Qwen-Local-Folder"
 

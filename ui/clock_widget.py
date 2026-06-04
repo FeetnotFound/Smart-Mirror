@@ -6,6 +6,7 @@ from PySide6.QtGui import QFont, QFontMetrics
 from PySide6.QtWidgets import QVBoxLayout, QLabel
 
 from ui.base_widget import BaseWidget, TRANS
+from ui import theme
 
 CLOCK_HEIGHT = 210
 
@@ -20,17 +21,17 @@ class ClockWidget(BaseWidget):
         layout.setSpacing(0)
 
         self._day = QLabel()
-        self._day.setStyleSheet("color: #555555; letter-spacing: 4px; " + TRANS)
+        self._day.setStyleSheet(f"color: {theme.dim}; letter-spacing: 4px; " + TRANS)
         self._day.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._day)
 
         self._time = QLabel()
-        self._time.setStyleSheet("color: #ffffff; " + TRANS)
+        self._time.setStyleSheet(f"color: {theme.text}; " + TRANS)
         self._time.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._time)
 
         self._date = QLabel()
-        self._date.setStyleSheet("color: #888888; " + TRANS)
+        self._date.setStyleSheet(f"color: {theme.mid}; " + TRANS)
         self._date.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._date)
 

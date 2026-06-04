@@ -1,0 +1,36 @@
+{
+  "mirror_name": "MILLER",
+  "calendar_days": 7,
+  "widgets": {
+    "terminal": true,
+    "calendar": true,
+    "tasks": true,
+    "clock": true,
+    "next_up": true,
+    "timer": true,
+    "alarm": true,
+    "system": true
+  },
+  "colors": {
+    "text": "#ffffff",
+    "mid": "#d6d6d6",
+    "dim": "#aaaaaa"
+  },
+  "layout": {
+    "top_left": "terminal",
+    "bottom_left": "tasks",
+    "bottom_right": [
+      [
+        "clock",
+        "next_up"
+      ],
+      [
+        "alarm",
+        "timer"
+      ],
+      [
+        "system"
+      ]
+    ]
+  }
+}

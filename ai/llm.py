@@ -1,8 +1,9 @@
 import threading
 from typing import Optional, Iterator
 
+import config
 from config import (
-    OLLAMA_URL, MODEL_NAME,
+    OLLAMA_URL,
     AI, RESET, SYSTEM, ROUTER,
     LOAD_TIMEOUT, ts,
 )
@@ -40,7 +41,7 @@ def _load_responder() -> None:
         resp = http_session.post(
             f"{OLLAMA_URL}/generate",
             json={
-                "model":      MODEL_NAME,
+                "model":      config.get_model_name(),
                 "prompt":     "hi",
                 "stream":     False,
                 "keep_alive": "30m",
@@ -49,9 +50,9 @@ def _load_responder() -> None:
             timeout=LOAD_TIMEOUT,
         )
         if resp.status_code == 200:
-            print(f"{ts()}{AI}[AI] {MODEL_NAME} loaded{RESET}")
+            print(f"{ts()}{AI}[AI] {config.get_model_name()} loaded{RESET}")
         else:
-            print(f"{ts()}{AI}[AI] {MODEL_NAME} returned status {resp.status_code}{RESET}")
+            print(f"{ts()}{AI}[AI] {config.get_model_name()} returned status {resp.status_code}{RESET}")
     except Exception as e:
         print(f"{ts()}{AI}[AI] Failed to warm up responder: {e}{RESET}")
 

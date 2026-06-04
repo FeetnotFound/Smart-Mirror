@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.base_widget import BaseWidget, TRANS
+from ui import theme
 from ui_backend.calendar_backend import get_backend, Event
 
 def _cal_rgba(name: str, alpha: int) -> str:
@@ -53,9 +54,15 @@ class _EventEntry(QWidget):
 
         title_lbl = QLabel(event.title)
         title_lbl.setFont(QFont("Arial", 11, QFont.Weight.Normal))
-        title_lbl.setStyleSheet("color: #dddddd; " + TRANS)
+        title_lbl.setStyleSheet(f"color: {theme.text}; " + TRANS)
         title_lbl.setWordWrap(True)
         layout.addWidget(title_lbl)
+
+        if event.calendar_name:
+            cal_lbl = QLabel(event.calendar_name.upper())
+            cal_lbl.setFont(QFont("Arial", 8, QFont.Weight.Light))
+            cal_lbl.setStyleSheet(f"color: {tc}; letter-spacing: 1px; " + TRANS)
+            layout.addWidget(cal_lbl)
 
 
 class _DayColumn(QWidget):
@@ -104,7 +111,7 @@ class CalendarWidget(BaseWidget):
 
         hdr = QLabel("CALENDAR")
         hdr.setFont(QFont("Arial", 11, QFont.Weight.Medium))
-        hdr.setStyleSheet("color: #444444; letter-spacing: 3px; " + TRANS)
+        hdr.setStyleSheet(f"color: {theme.dim}; letter-spacing: 3px; " + TRANS)
         outer.addWidget(hdr)
 
         self._cols_w = QWidget()

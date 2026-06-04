@@ -3,8 +3,9 @@ import json
 import requests
 from typing import Iterator
 
+import config
 from config import (
-    OLLAMA_URL, MODEL_NAME,
+    OLLAMA_URL,
     RESET, SYSTEM, EXECUTER,
     QUERY_TIMEOUT, ts,
 )
@@ -64,7 +65,7 @@ def _stream_sentences(
         with session.post(
             f"{OLLAMA_URL}/chat",
             json={
-                "model":    MODEL_NAME,
+                "model":    config.get_model_name(),
                 "messages": [
                     {"role": "system", "content": system_msg},
                     {"role": "user",   "content": prompt},

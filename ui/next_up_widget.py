@@ -6,6 +6,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QFrame
 
 from ui.base_widget import BaseWidget, FitLabel, TRANS
+from ui import theme
 from ui_backend.calendar_backend import get_backend
 
 def _cal_rgba(name: str, alpha: int) -> str:
@@ -59,17 +60,22 @@ class NextUpWidget(BaseWidget):
 
         self._time_lbl  = QLabel()
         self._time_lbl.setFont(QFont("Arial", 11, QFont.Weight.Light))
-        self._time_lbl.setStyleSheet("color: #555555; " + TRANS)
+        self._time_lbl.setStyleSheet(f"color: {theme.dim}; " + TRANS)
         bl.addWidget(self._time_lbl)
 
         self._title_lbl = FitLabel(max_pt=30)
-        self._title_lbl.setStyleSheet("color: #eeeeee; " + TRANS)
+        self._title_lbl.setStyleSheet(f"color: {theme.text}; " + TRANS)
         bl.addWidget(self._title_lbl)
 
         self._day_lbl = QLabel()
         self._day_lbl.setFont(QFont("Arial", 12, QFont.Weight.Light))
-        self._day_lbl.setStyleSheet("color: #666666; " + TRANS)
+        self._day_lbl.setStyleSheet(f"color: {theme.mid}; " + TRANS)
         bl.addWidget(self._day_lbl)
+
+        self._cal_lbl = QLabel()
+        self._cal_lbl.setFont(QFont("Arial", 9, QFont.Weight.Light))
+        self._cal_lbl.setStyleSheet(f"color: {theme.dim}; letter-spacing: 1px; " + TRANS)
+        bl.addWidget(self._cal_lbl)
         bl.addStretch()
 
         poll = QTimer(self)
@@ -85,8 +91,9 @@ class NextUpWidget(BaseWidget):
                 " border: 1px solid #222; border-radius: 5px; }")
             self._time_lbl.setText("")
             self._title_lbl.setText("nothing coming up")
-            self._title_lbl.setStyleSheet("color: #555; " + TRANS)
+            self._title_lbl.setStyleSheet(f"color: {theme.dim}; " + TRANS)
             self._day_lbl.setText("")
+            self._cal_lbl.setText("")
             return
 
         evt = events[0]
@@ -99,6 +106,7 @@ class NextUpWidget(BaseWidget):
             " border-radius: 5px; }")
         self._time_lbl.setStyleSheet(f"color: {tc}; " + TRANS)
         self._time_lbl.setText(_time_str(evt.start_iso))
-        self._title_lbl.setStyleSheet("color: #eeeeee; " + TRANS)
+        self._title_lbl.setStyleSheet(f"color: {theme.text}; " + TRANS)
         self._title_lbl.setText(evt.title)
         self._day_lbl.setText(_day_label(evt.start_iso))
+        self._cal_lbl.setText(evt.calendar_name.upper() if evt.calendar_name else "")
