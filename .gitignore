@@ -3,3 +3,4 @@ variables.env
 .mirror/
 *.db
 *.log
+models/
