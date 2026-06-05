@@ -39,7 +39,7 @@ dotenv.load_dotenv("variables.env")
 
 def _load_settings() -> dict:
     defaults: dict = {
-        "mirror_name": "MILLER",
+        "mirror_name": "MIRROR",
         "calendar_days": 7,
         "widgets": {
             "terminal": True, "calendar": True, "tasks": True,

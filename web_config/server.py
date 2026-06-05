@@ -14,15 +14,27 @@ import sys
 import threading
 from pathlib import Path
 
-from ui_backend.ui_control_backend import ui_bus
+# ui_bus is only available when running inside the Qt mirror app.
+# When the web server runs as a standalone service (no display), the import
+# is skipped and settings changes are written to disk only — the mirror app
+# picks them up on next start.
+try:
+    from ui_backend.ui_control_backend import ui_bus as _ui_bus
+except Exception:
+    _ui_bus = None  # type: ignore
+
+def _emit(cmd: str, a: str = "", b: str = "", c: str = "") -> None:
+    if _ui_bus is not None:
+        _ui_bus.command.emit(cmd, a, b, c)
 
 _ROOT         = Path(__file__).resolve().parent.parent
+_PROJECT_ROOT = _ROOT          # alias used by update handlers
 SETTINGS_PATH = _ROOT / "settings.json"
 STATIC_PATH   = Path(__file__).resolve().parent / "static"
 DB_PATH       = _ROOT / "ui_backend" / "data" / "calendar.db"
 
 _DEFAULTS: dict = {
-    "mirror_name": "MILLER",
+    "mirror_name": "MIRROR",
     "calendar_days": 7,
     "widgets": {
         "terminal": True,
@@ -117,10 +129,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                     ).fetchall()
                 self._send_json([{"name": r[0], "color": r[1]} for r in rows])
 
-            elif path == "/api/env":    self._get_env()
-            elif path == "/api/models": self._get_models()
-            elif path == "/api/lights": self._get_lights()
-            elif path == "/api/plugs":  self._get_plugs()
+            elif path == "/api/env":           self._get_env()
+            elif path == "/api/models":        self._get_models()
+            elif path == "/api/lights":        self._get_lights()
+            elif path == "/api/plugs":         self._get_plugs()
+            elif path == "/api/update/check":  self._get_update_check()
 
             else:
                 self._send_json({"error": "not found"}, 404)
@@ -200,16 +213,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                         for name, visible in data["widgets"].items():
                             if name in current["widgets"]:
                                 current["widgets"][name] = bool(visible)
-                                try:
-                                    ui_bus.command.emit(
-                                        "show" if visible else "hide", name, "", "")
-                                except Exception as e:
-                                    print(f"[WebConfig] emit failed: {e}")
+                                _emit("show" if visible else "hide", name)
                     save_settings(current)
-                try:
-                    ui_bus.command.emit("reload", "", "", "")
-                except Exception:
-                    pass
+                _emit("reload")
                 self._send_json({"ok": True})
 
             elif path == "/api/calendar-colors":
@@ -225,10 +231,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                     c.execute(
                         "INSERT OR REPLACE INTO calendar_colors VALUES (?,?)", (name, color)
                     )
-                try:
-                    ui_bus.command.emit("refresh", "calendar", "", "")
-                except Exception as e:
-                    print(f"[WebConfig] emit failed: {e}")
+                _emit("refresh", "calendar")
                 self._send_json({"ok": True})
 
             elif path == "/api/install/status":
@@ -240,6 +243,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                          for k, v in data.items() if str(k).strip()]
                 env_path.write_text("\n".join(lines) + "\n")
                 self._send_json({"ok": True})
+
+            elif path == "/api/update/apply":
+                self._post_update_apply()
 
             elif path == "/api/install":
                 script = data.get("script", "")
@@ -288,6 +294,72 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 self._send_json({"ok": False, "error": str(e)}, 500)
             except Exception:
                 pass
+
+    # ── Update handlers ───────────────────────────────────────────────────────
+
+    def _get_update_check(self):
+        import urllib.request as _ur
+        repo = "FeetnotFound/Smart-Mirror"
+        try:
+            current_sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=_PROJECT_ROOT, stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            current_sha = "unknown"
+
+        try:
+            req = _ur.Request(
+                f"https://api.github.com/repos/{repo}/commits/main",
+                headers={"User-Agent": "mirror-os", "Accept": "application/vnd.github.v3+json"}
+            )
+            with _ur.urlopen(req, timeout=6) as r:
+                data = json.loads(r.read())
+            latest_sha = data["sha"]
+            latest_msg = data["commit"]["message"].split("\n")[0][:80]
+            up_to_date = current_sha == latest_sha
+            self._send_json({
+                "current": current_sha[:7],
+                "latest":  latest_sha[:7],
+                "up_to_date": up_to_date,
+                "latest_message": latest_msg,
+            })
+        except Exception as e:
+            self._send_json({
+                "current": current_sha[:7] if current_sha != "unknown" else "unknown",
+                "latest":  None,
+                "up_to_date": None,
+                "error": str(e),
+            })
+
+    def _post_update_apply(self):
+        def _do_update():
+            try:
+                pull = subprocess.run(
+                    ["git", "pull", "origin", "main"],
+                    cwd=_PROJECT_ROOT, capture_output=True, text=True, timeout=60
+                )
+                pip = subprocess.run(
+                    [str(_PROJECT_ROOT / ".mirror" / "bin" / "pip"),
+                     "install", "-q", "-r",
+                     str(_PROJECT_ROOT / "requirements-base.txt")],
+                    capture_output=True, text=True, timeout=180
+                )
+                self._send_json({
+                    "ok": True,
+                    "output": pull.stdout.strip() or "Already up to date.",
+                    "pip": "packages updated" if pip.returncode == 0 else pip.stderr[:200],
+                })
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)})
+                return
+            # Restart after the response is sent
+            import time, signal
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        import threading
+        threading.Thread(target=_do_update, daemon=True).start()
 
 
 # ── Threaded HTTP server ──────────────────────────────────────────────────────
@@ -377,3 +449,28 @@ def start(host: str = "0.0.0.0", port: int = 80) -> None:
     ip       = _local_ip()
     port_str = f":{port}" if port != 80 else ""
     print(f"[WebConfig] config page: http://{hostname}.local{port_str}  —  http://{ip}{port_str}")
+
+
+if __name__ == "__main__":
+    # Standalone mode — runs the web config server without the Qt mirror app.
+    # Settings changes are written to disk; the mirror app picks them up on restart.
+    # The server blocks here (no daemon thread) so systemd can manage the process.
+    import sys as _sys
+    for p in (80, 8080, 8888, 5001, 5002):
+        try:
+            srv = _Server(("0.0.0.0", p), _Handler)
+            break
+        except (PermissionError, OSError):
+            continue
+    else:
+        print("[WebConfig] no free port found — exiting")
+        _sys.exit(1)
+
+    hostname = socket.gethostname()
+    ip       = _local_ip()
+    port_str = f":{p}" if p != 80 else ""
+    print(f"[WebConfig] standalone: http://{hostname}.local{port_str}  —  http://{ip}{port_str}")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass

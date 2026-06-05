@@ -24,8 +24,8 @@ from ai.tts import speak, speak_sentences         # noqa: E402
 from ai.llm import prompt_router_model_stream         # noqa: E402
 
 # ── Wake-word config ──────────────────────────────────────────────────────────
-HOT_WORDS   = frozenset({"miller"})
-STRIP_WORDS = frozenset({"hey", "miller"})
+HOT_WORDS   = frozenset({"mirror"})
+STRIP_WORDS = frozenset({"hey", "mirror"})
 
 _PUNCT_RE = re.compile(r"[^\w\s]")
 _STRIP_RE = re.compile(

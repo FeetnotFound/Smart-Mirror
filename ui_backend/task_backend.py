@@ -6,7 +6,7 @@ You asked for: add task, check off task, "and stuff like that". So the backend
 exposes add / complete / delete / list. Voice only gives you `add_task`; the
 others are driven by the widget (tap to check off) — the router has no
 complete_task function, which is fine because checking off is a UI action,
-not a spoken one. If you DO want "Miller, mark the laundry done" by voice,
+not a spoken one. If you DO want "Mirror, mark the laundry done" by voice,
 that needs a new router function + retraining. Flagging, not assuming.
 """
 import sqlite3

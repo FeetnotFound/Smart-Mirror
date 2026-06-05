@@ -664,7 +664,7 @@ main > .card.full-width {
       <div class="field-row">
         <input class="field-input" id="mirror-name" type="text"
                maxlength="20" spellcheck="false" autocomplete="off"
-               placeholder="MILLER">
+               placeholder="MIRROR">
         <button class="btn btn-accent" id="btn-save-general" onclick="saveGeneral()">Save</button>
       </div>
       <div class="field-hint">Shown in the accent bar between the top and bottom panels.</div>
@@ -693,6 +693,18 @@ main > .card.full-width {
       <button class="btn btn-accent" id="btn-save-model" onclick="saveModel()">Apply</button>
       <span id="model-hint" class="field-hint">Pick the Ollama model the AI should use</span>
     </div>
+  </div>
+
+  <!-- ── Updates ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Updates</span>
+      <button class="btn" id="btn-check-update" onclick="checkUpdate()">Check</button>
+    </div>
+    <div id="update-area" class="field-hint" style="padding:4px 0 8px">—</div>
+    <button class="btn btn-primary" id="btn-apply-update" onclick="applyUpdate()" style="display:none">
+      Update &amp; Restart
+    </button>
   </div>
 
   <!-- ── Install ──────────────────────────────────────────────────────── -->
@@ -779,6 +791,7 @@ async function init() {
     document.getElementById("calendar-days").value = _settings.calendar_days || 7;
     loadModels();
     loadInstallStatus();
+    checkUpdate();
   } catch (e) {
     setStatus(false);
     document.getElementById("colors-list").innerHTML =
@@ -1551,6 +1564,62 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 init();
+
+// ── Update ───────────────────────────────────────────────────────────────────
+async function checkUpdate() {
+  const area = document.getElementById("update-area");
+  const btn  = document.getElementById("btn-apply-update");
+  area.textContent = "Checking…";
+  try {
+    const r = await fetch("/api/update/check");
+    const d = await r.json();
+    if (d.error && !d.current) {
+      area.textContent = "Could not reach GitHub: " + d.error;
+      return;
+    }
+    if (d.up_to_date) {
+      area.textContent = `Up to date  (${d.current})`;
+      btn.style.display = "none";
+    } else if (d.up_to_date === false) {
+      area.innerHTML =
+        `Update available: <strong>${d.current}</strong> → <strong>${d.latest}</strong><br>` +
+        `<span style="opacity:.7">${esc(d.latest_message)}</span>`;
+      btn.style.display = "";
+    } else {
+      area.textContent = `Current: ${d.current}  (offline — cannot check for updates)`;
+      btn.style.display = "none";
+    }
+  } catch(e) {
+    area.textContent = "Check failed: " + e.message;
+  }
+}
+
+async function applyUpdate() {
+  const area = document.getElementById("update-area");
+  const btn  = document.getElementById("btn-apply-update");
+  btn.disabled = true;
+  btn.textContent = "Updating…";
+  area.textContent = "Pulling from GitHub…";
+  try {
+    const r = await fetch("/api/update/apply", { method: "POST",
+      headers: {"Content-Type":"application/json"}, body: "{}" });
+    const d = await r.json();
+    if (d.ok) {
+      area.textContent = d.output + " — restarting mirror…";
+      btn.style.display = "none";
+      toast("Updated! Mirror will restart in a moment.");
+      setTimeout(checkUpdate, 8000);
+    } else {
+      area.textContent = "Update failed: " + d.error;
+      btn.disabled = false;
+      btn.textContent = "Update & Restart";
+    }
+  } catch(e) {
+    area.textContent = "Update failed: " + e.message;
+    btn.disabled = false;
+    btn.textContent = "Update & Restart";
+  }
+}
 </script>
 </body>
 </html>

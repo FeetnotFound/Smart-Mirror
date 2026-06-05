@@ -4,7 +4,7 @@ def ts() -> str:
     """Return a dark-grey HH:MM:SS.mmm prefix for timestamped debug prints.
 
     Example output:
-        14:32:10.003 [Ear]: Hey Miller, what is the time?
+        14:32:10.003 [Ear]: Hey Mirror, what is the time?
         14:32:10.005 [System] Streaming model response...
         14:32:11.249 [Router]: ('nonthinking', {'prompt': ...})
         14:32:11.814 [Voice] Streaming voice 4

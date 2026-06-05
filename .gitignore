@@ -1,15 +1,34 @@
+# ── Credentials & local config ───────────────────────────────────────────────
 variables.env
-.claude/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
 .mirror/
+
+# ── User data (SQLite databases) ─────────────────────────────────────────────
 *.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
-router_models/
+
+# ── AI model files (large binaries) ──────────────────────────────────────────
 *.onnx
 *.onnx.json
+models/router_models/
+
+# ── OS build artifacts ────────────────────────────────────────────────────────
+build_distro.sh
 flash.sh
 setup_mirror_os.sh
 Dockerfile
-build_distro.sh
-.build/
 docker/
+.build/
 dist/
+
+# ── IDE / OS cruft ────────────────────────────────────────────────────────────
+.DS_Store
+.claude/
+.vscode/
+*.swp

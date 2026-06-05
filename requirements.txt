@@ -1,34 +1,28 @@
-# ── Core runtime ────────────────────────────────────────────────
-PySide6        # Qt desktop UI — widgets, layouts, signals
-requests       # HTTP calls to the local Ollama server
-RealtimeSTT    # microphone speech-to-text (pulls in torch + faster-whisper)
-piper-tts      # text-to-speech voice synthesis
+# Full mirror requirements — base runtime + AI voice pipeline.
+# For a base install (no voice), use requirements-base.txt instead.
+#
+# Install:
+#   pip install -r requirements-base.txt   # core only
+#   pip install -r requirements.txt        # core + AI voice
 
-# ── Feature backends ────────────────────────────────────────────
-psutil         # system_info_backend — CPU / RAM / temp / uptime
-caldav         # calendar_backend — iCloud CalDAV client
-icalendar      # calendar_backend — parsing iCal event data
-python-dotenv  # load variables.env (iCloud credentials, Hue bridge, etc.)
-dbus-python    # music_backend — MPRIS D-Bus client for shairport-sync
-               #   requires system package: sudo apt install libdbus-1-dev
-               #   run install_shairport.sh to set up shairport-sync itself
+# ── Core runtime (see requirements-base.txt) ─────────────────────────────────
+PySide6
+requests
+psutil
+caldav
+icalendar
+python-dotenv
 
-# ── Optional: smart plugs (plug_backend) ────────────────────────
-# python-kasa  # TP-Link / Tapo smart plugs
+# ── AI voice pipeline ────────────────────────────────────────────────────────
+RealtimeSTT    # Whisper speech-to-text (pulls torch + faster-whisper)
+piper-tts      # offline text-to-speech
 
-# ── Optional: web search provider (web_search_backend) ──────────
-# Pick ONE provider and uncomment. ddgs needs no API key.
-# ddgs         # DuckDuckGo search, no key, rate-limited
+# ── Optional: AirPlay music display ─────────────────────────────────────────
+# Requires: sudo apt install libdbus-1-dev  &&  bash install_shairport.sh
+# dbus-python
 
-# ── Optional: light control (light_backend) ─────────────────────
-# Pick the lib matching your hardware, then wire _dispatch in light_backend.py.
+# ── Optional: smart home ────────────────────────────────────────────────────
+# python-kasa  # Kasa / Tapo smart plugs
 # phue         # Philips Hue bridge
-# lifxlan      # LIFX
-# (Home Assistant needs no extra package — it's a REST call via requests)
-
-# ── Optional: legacy LLM router (ai/router.py) ──────────────────
-# The default pipeline uses keyword_router.py and does NOT need these.
-# Uncomment only if you switch back to the fine-tuned router.
-# transformers
-# peft
-# torch        # (already pulled in transitively by RealtimeSTT)
+# lifxlan      # LIFX lights
+# ddgs         # DuckDuckGo web search (no API key)
