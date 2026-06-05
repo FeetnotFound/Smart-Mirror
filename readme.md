@@ -155,5 +155,10 @@ Voice control works on CPU but expect 3–8 s latency. On a modern NVIDIA GPU it
 | **shairport-sync** | AirPlay receiver | `bash install_shairport.sh` |
 
 ## License
+Copyright © 2026 Theodor Schermann. All rights reserved.
 
+No part of this software, including the source code, documentation, and design, 
+may be reproduced, distributed, or transmitted in any form or by any means, 
+including photocopying, recording, or other electronic or mechanical methods, 
+without the prior written permission of the copyright holder.
 See [LICENSE](LICENSE).
