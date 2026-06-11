@@ -1022,13 +1022,20 @@ main > .card.full-width {
     <div class="card-head">
       <span class="card-title">Add-Ons</span>
     </div>
-    <div id="install-status-area"></div>
     <div class="field-group" style="border-top:1px solid var(--border)">
-      <div class="field-label" style="margin-bottom:12px">Voice Control (AI)</div>
-      <div class="field-hint" style="margin-bottom:10px">Installs Ollama, Whisper STT, and Piper TTS. Downloads ~3–5 GB. Requires sudo. GPU recommended.</div>
+      <div class="field-label" style="margin-bottom:6px">Voice Commands</div>
+      <div class="field-hint" style="margin-bottom:10px">Wake word + commands for timers, lights, alarms, and tasks. Downloads ~1–2 GB (Whisper model). No GPU required.</div>
+      <div id="voice-install-status" class="field-hint" style="margin-bottom:8px"></div>
+      <button class="btn btn-accent" id="btn-install-voice" onclick="runInstall('install_voice.sh','btn-install-voice','voice-install-status')">
+        Install Voice Commands
+      </button>
+    </div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:6px">AI Responses</div>
+      <div class="field-hint" style="margin-bottom:10px">Adds conversational AI responses via Ollama. Downloads ~3–5 GB. GPU strongly recommended. Install Voice Commands first.</div>
       <div id="ai-install-status" class="field-hint" style="margin-bottom:8px"></div>
       <button class="btn btn-accent" id="btn-install-ai" onclick="runInstall('install_ai.sh','btn-install-ai','ai-install-status')">
-        Install Voice Control
+        Install AI Responses
       </button>
     </div>
   </div>
@@ -2250,28 +2257,55 @@ async function loadInstallStatus() {
   try {
     const res  = await fetch("/api/install/status");
     const data = await res.json();
+    let polling = false;
 
-    const aiEl = document.getElementById("ai-install-status");
+    // Voice Commands
+    const voiceEl  = document.getElementById("voice-install-status");
+    const voiceBtn = document.getElementById("btn-install-voice");
+    if (data.voice_available) {
+      voiceEl.textContent = "Installed.";
+      voiceEl.style.color = "var(--accent)";
+      if (voiceBtn) voiceBtn.textContent = "Reinstall Voice Commands";
+    } else {
+      const proc = data["install_voice.sh"];
+      if (proc === "running") {
+        voiceEl.textContent = "Installing… check back in a few minutes.";
+        voiceEl.style.color = "var(--text-mid)";
+        if (voiceBtn) voiceBtn.disabled = true;
+        polling = true;
+      } else if (proc && proc !== "done") {
+        voiceEl.textContent = "Failed — check .install_voice.sh.log for details.";
+        voiceEl.style.color = "var(--red, #ff6b6b)";
+      } else {
+        voiceEl.textContent = "Not installed.";
+        voiceEl.style.color = "var(--text-dim)";
+      }
+    }
+
+    // AI Responses
+    const aiEl  = document.getElementById("ai-install-status");
     const aiBtn = document.getElementById("btn-install-ai");
     if (data.ai_available) {
-      aiEl.textContent = "Voice control is installed.";
+      aiEl.textContent = "Ollama is running — AI responses active.";
       aiEl.style.color = "var(--accent)";
-      if (aiBtn) aiBtn.textContent = "Reinstall Voice Control";
+      if (aiBtn) aiBtn.textContent = "Reinstall AI Responses";
     } else {
       const proc = data["install_ai.sh"];
       if (proc === "running") {
         aiEl.textContent = "Installing… this takes several minutes.";
         aiEl.style.color = "var(--text-mid)";
         if (aiBtn) aiBtn.disabled = true;
-        setTimeout(loadInstallStatus, 5000);
+        polling = true;
       } else if (proc && proc !== "done") {
-        aiEl.textContent = "Install " + proc + " — check .install_ai.sh.log for details.";
+        aiEl.textContent = "Failed — check .install_ai.sh.log for details.";
         aiEl.style.color = "var(--red, #ff6b6b)";
       } else {
         aiEl.textContent = "Not installed.";
         aiEl.style.color = "var(--text-dim)";
       }
     }
+
+    if (polling) setTimeout(loadInstallStatus, 5000);
   } catch { /* ignore */ }
 }
 

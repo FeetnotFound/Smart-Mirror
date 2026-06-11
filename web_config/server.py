@@ -412,7 +412,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
             elif path == "/api/install":
                 script = data.get("script", "")
-                allowed = {"install_ai.sh", "install_shairport.sh"}
+                allowed = {"install_ai.sh", "install_voice.sh", "install_shairport.sh"}
                 if script not in allowed:
                     self._send_json({"ok": False, "error": "unknown script"}, 400)
                     return
@@ -550,7 +550,14 @@ def _install_status() -> dict:
     # ai.stt is imported by main.py before server starts; if it succeeded
     # the module is in sys.modules. Re-importing RealtimeSTT directly is
     # unreliable (CUDA side-effects, package name variations, etc.)
-    statuses["ai_available"] = "ai.stt" in sys.modules
+    import importlib.util
+    statuses["voice_available"] = importlib.util.find_spec("RealtimeSTT") is not None
+    try:
+        import urllib.request as _ur
+        with _ur.urlopen("http://localhost:11434/api/tags", timeout=2) as r:
+            statuses["ai_available"] = r.status == 200
+    except Exception:
+        statuses["ai_available"] = False
     statuses["shairport_available"] = bool(
         subprocess.run(["which", "shairport-sync"],
                        capture_output=True).returncode == 0)
