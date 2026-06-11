@@ -7,8 +7,8 @@ icalendar      # calendar_backend — iCal event parsing
 python-dotenv  # load variables.env
 
 # Optional — uncomment the systems you use
-# dbus-python  # music_widget AirPlay display (needs libdbus-1-dev + shairport-sync)
-# python-kasa  # smart plugs: Kasa / Tapo (by IP)
-# phue         # lights: Philips Hue bridge
-# lifxlan      # lights: LIFX (LAN discovery)
+dbus-python  # music_widget AirPlay display (needs libdbus-1-dev + shairport-sync)
+python-kasa  # smart plugs: Kasa / Tapo (by IP)
+phue         # lights: Philips Hue bridge
+lifxlan      # lights: LIFX (LAN discovery)
 # ddgs         # web search backend (no API key)
