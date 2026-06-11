@@ -108,15 +108,17 @@ chown "${MIRROR_USER}:${MIRROR_USER}" "${MIRROR_HOME}/.bash_profile"
 step ".xinitrc"
 cat > "${MIRROR_HOME}/.xinitrc" <<XEOF
 #!/bin/bash
-# Disable screensaver and DPMS so the display never turns off
 xset s off
 xset -dpms
 xset s noblank
-
-# Hide mouse cursor after 3 seconds of no movement
 unclutter -idle 3 -root &
 
-# Keep the mirror running; restart on crash
+# Force software rendering — required on Pi (vc4/v3d lacks full OpenGL 3.x)
+# and harmless on x86 (llvmpipe fallback still renders correctly)
+export QT_QPA_PLATFORM=xcb
+export QT_OPENGL=software
+export LIBGL_ALWAYS_SOFTWARE=1
+
 while true; do
     cd "${INSTALL_DIR}"
     "${INSTALL_DIR}/.mirror/bin/python" main.py
@@ -204,6 +206,25 @@ if command -v ufw &>/dev/null; then
   ufw allow ssh   comment 'mirror-ssh'  2>/dev/null || true
   ufw allow 80    comment 'mirror-web'  2>/dev/null || true
   info "ufw: SSH and port 80 allowed"
+fi
+
+# ── 12a. Raspberry Pi GPU driver ─────────────────────────────────────────────
+# On Pi 4/5, the vc4-kms-v3d overlay is required for /dev/dri/card0 to exist.
+# Without it Xorg falls back to fbdev and Qt cannot render any windows.
+CONFIG_TXT="/boot/firmware/config.txt"
+if [[ -f "${CONFIG_TXT}" ]]; then
+    step "Raspberry Pi GPU driver"
+    if ! grep -q "vc4-kms-v3d" "${CONFIG_TXT}"; then
+        # Insert into [pi4] block if present, otherwise append under [all]
+        if grep -q "^\[pi4\]" "${CONFIG_TXT}"; then
+            sed -i '/^\[pi4\]/a dtoverlay=vc4-kms-v3d\ngpu_mem=128' "${CONFIG_TXT}"
+        else
+            printf '\n[all]\ndtoverlay=vc4-kms-v3d\ngpu_mem=128\n' >> "${CONFIG_TXT}"
+        fi
+        info "vc4-kms-v3d overlay added to ${CONFIG_TXT}"
+    else
+        info "vc4-kms-v3d already configured"
+    fi
 fi
 
 # ── 12. Disable automatic sleep / screen power ───────────────────────────────
