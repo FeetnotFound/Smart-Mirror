@@ -53,6 +53,7 @@ apt-get install -y \
   fonts-dejavu-core fontconfig \
   avahi-daemon avahi-utils libnss-mdns \
   openssh-server \
+  alsa-utils \
   ca-certificates curl \
   unclutter   # hides the mouse cursor after a short idle
 
@@ -144,6 +145,44 @@ info "mDNS (avahi) enabled — device reachable at $(hostname).local"
 step "SSH"
 systemctl enable --now ssh
 info "SSH enabled — remote access available"
+
+# ── 11a. Auto-update service ──────────────────────────────────────────────────
+step "Auto-update service"
+cat > /etc/systemd/system/mirror-autoupdate.service <<EOF
+[Unit]
+Description=Mirror OS Auto-Update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=${MIRROR_USER}
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=/bin/bash -c '\
+    git pull origin main 2>&1 | tee -a /var/log/mirror-update.log && \
+    ${INSTALL_DIR}/.mirror/bin/pip install -q -r ${INSTALL_DIR}/requirements-base.txt \
+        >> /var/log/mirror-update.log 2>&1 && \
+    systemctl restart mirror-web 2>/dev/null || true'
+StandardOutput=journal
+StandardError=journal
+EOF
+
+cat > /etc/systemd/system/mirror-autoupdate.timer <<'EOF'
+[Unit]
+Description=Mirror OS Auto-Update Timer
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now mirror-autoupdate.timer
+info "Auto-update enabled — checks for updates nightly at 3 AM"
 
 # ── 11. Firewall ──────────────────────────────────────────────────────────────
 step "Firewall"

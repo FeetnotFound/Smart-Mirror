@@ -530,6 +530,217 @@ main > .card.full-width {
   box-shadow: 0 4px 16px rgba(0,0,0,.6);
 }
 
+/* ── Active-item rows (timers / alarms) ─────────────────────────────────── */
+.item-row {
+  display: flex;
+  align-items: center;
+  padding: 13px 18px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+.item-row:last-child { border-bottom: none; }
+.item-row:hover { background: var(--surface2); }
+
+.item-info { flex: 1; min-width: 0; }
+.item-primary {
+  font-size: 17px;
+  color: var(--text);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+.item-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 5px 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.btn-cancel:hover { color: var(--red); border-color: var(--red-bd); background: var(--red-bg); }
+
+/* ── Device rows (lights / plugs / groups) ──────────────────────────────── */
+.device-row {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: background .15s;
+}
+.device-row:last-child { border-bottom: none; }
+.device-row:hover { background: var(--surface2); }
+
+.device-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.device-info {
+  flex: 1;
+  min-width: 0;
+}
+.device-name {
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.device-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: .4px;
+}
+.device-controls {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── On / Off segmented toggle ──────────────────────────────────────────── */
+.state-toggle {
+  display: flex;
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color .2s;
+}
+.state-toggle[data-state="on"]  { border-color: var(--green-bd); }
+.state-toggle[data-state="off"] { border-color: var(--red-bd); }
+
+.on-btn, .off-btn {
+  padding: 6px 15px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  transition: background .18s, color .18s;
+  letter-spacing: .2px;
+}
+.on-btn  { border-right: 1px solid var(--border2); }
+
+/* active state */
+.state-toggle[data-state="on"]  .on-btn  { background: var(--green-bg); color: var(--green); }
+.state-toggle[data-state="off"] .off-btn { background: var(--red-bg);   color: var(--red);   }
+
+/* hover (only when not already active) */
+.state-toggle:not([data-state="on"])  .on-btn:hover  { background: rgba(76,217,100,.10); color: var(--green); }
+.state-toggle:not([data-state="off"]) .off-btn:hover { background: rgba(255,107,107,.10); color: var(--red); }
+
+/* separator tints to match active side */
+.state-toggle[data-state="on"]  .on-btn  { border-right-color: var(--green-bd); }
+.state-toggle[data-state="off"] .on-btn  { border-right-color: var(--red-bd); }
+
+.device-extra {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 2px 2px;
+  border-top: 1px solid var(--border);
+}
+.extra-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.extra-label input[type=range] {
+  width: 100px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.brightness-val {
+  min-width: 34px;
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Color swatches ─────────────────────────────────────────────────────── */
+.color-swatches { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.12);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+  flex-shrink: 0;
+}
+.color-swatch:hover    { transform: scale(1.25); box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.color-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.color-none {
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: color .15s;
+}
+.color-none.selected { color: var(--accent); }
+.color-none:hover    { color: var(--text); }
+
+/* ── Member chips (light groups) ────────────────────────────────────────── */
+.member-chip {
+  font-size: 12px;
+  color: var(--text-mid);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+.member-check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-mid);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.member-check-label:hover { color: var(--text); border-color: var(--accent-bd); }
+.member-check-label input { accent-color: var(--accent); cursor: pointer; }
+.member-check-label:has(input:checked) {
+  color: var(--accent);
+  border-color: var(--accent-bd);
+  background: var(--accent-bg);
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
   main { grid-template-columns: 1fr; padding: 12px 10px; }
@@ -619,6 +830,26 @@ main > .card.full-width {
     </div>
   </div>
 
+  <!-- ── Light Groups ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Light Groups</span>
+      <span class="badge badge-live">live</span>
+    </div>
+    <div id="light-groups-list"><div class="empty">Loading…</div></div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:10px">New Group</div>
+      <div class="field-row" style="margin-bottom:10px">
+        <input class="field-input" id="group-name" placeholder='group name (e.g. "living room")'
+               style="flex:1" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="group-member-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-dim)">Add lights above first</span>
+      </div>
+      <button class="btn btn-accent" onclick="addLightGroup()">Create Group</button>
+    </div>
+  </div>
+
   <!-- ── Plugs ─────────────────────────────────────────────────────────── -->
   <div class="card">
     <div class="card-head">
@@ -680,6 +911,85 @@ main > .card.full-width {
       <div class="field-hint">Number of columns in the calendar widget.</div>
     </div>
 
+  </div>
+
+  <!-- ── Schedule ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Schedule</span>
+      <span class="badge badge-live">live</span>
+    </div>
+    <div class="widget-grid" style="grid-template-columns:1fr">
+      <div class="widget-cell" style="border-right:none;border-bottom:1px solid var(--border)">
+        <div class="widget-info">
+          <div class="widget-label">Display Schedule</div>
+          <div class="widget-note">Blank screen during sleep hours</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="schedule-enabled">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Sleep &amp; Wake Times</div>
+      <div class="field-row" style="flex-wrap:wrap;gap:8px;align-items:center">
+        <input class="field-input" id="schedule-sleep" type="time" value="23:00" style="flex:1;min-width:100px">
+        <span style="font-size:12px;color:var(--text-dim);white-space:nowrap">sleep until</span>
+        <input class="field-input" id="schedule-wake"  type="time" value="07:00" style="flex:1;min-width:100px">
+        <button class="btn btn-accent" onclick="saveSchedule()">Save</button>
+      </div>
+    </div>
+    <div class="widget-grid" style="grid-template-columns:1fr">
+      <div class="widget-cell" style="border-right:none;border-bottom:none">
+        <div class="widget-info">
+          <div class="widget-label">Wake-up sound</div>
+          <div class="widget-note">Play a chime when the display wakes</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="schedule-wakeup-sound" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Timers ────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Timers</span>
+      <span class="badge badge-live">live</span>
+    </div>
+    <div id="timers-list"><div class="empty">Loading…</div></div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:10px">New Timer</div>
+      <div class="field-row" style="flex-wrap:wrap;gap:8px">
+        <input class="field-input" id="timer-duration" placeholder="e.g. 5m, 1h30m, 90s"
+               style="flex:2;min-width:110px" autocomplete="off" spellcheck="false">
+        <input class="field-input" id="timer-label" placeholder="label (optional)"
+               style="flex:2;min-width:100px" autocomplete="off">
+        <button class="btn btn-accent" onclick="setTimer()">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alarms ────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Alarms</span>
+      <span class="badge badge-live">live</span>
+    </div>
+    <div id="alarms-list"><div class="empty">Loading…</div></div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:10px">New Alarm</div>
+      <div class="field-row" style="flex-wrap:wrap;gap:8px">
+        <input class="field-input" id="alarm-time" type="time"
+               style="flex:1;min-width:110px">
+        <input class="field-input" id="alarm-label" placeholder="label (optional)"
+               style="flex:2;min-width:100px" autocomplete="off">
+        <button class="btn btn-accent" onclick="setAlarm()">Set</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── AI Model ─────────────────────────────────────────────────────── -->
@@ -763,32 +1073,43 @@ function setStatus(ok) {
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [sRes, cRes, envRes, lightsRes, plugsRes] = await Promise.all([
+    const [sRes, cRes, envRes, lightsRes, plugsRes, groupsRes] = await Promise.all([
       fetch("/api/settings"),
       fetch("/api/calendar-colors"),
       fetch("/api/env"),
       fetch("/api/lights"),
       fetch("/api/plugs"),
+      fetch("/api/light-groups"),
     ]);
 
-    let settings, colors, env, lights, plugs;
-    try { settings = await sRes.json(); }     catch { throw new Error(`/api/settings (${sRes.status})`); }
-    try { colors   = await cRes.json(); }     catch { colors   = []; }
-    try { env      = await envRes.json(); }   catch { env      = {}; }
+    let settings, colors, env, lights, plugs, groups;
+    try { settings = await sRes.json(); }      catch { throw new Error(`/api/settings (${sRes.status})`); }
+    try { colors   = await cRes.json(); }      catch { colors  = []; }
+    try { env      = await envRes.json(); }    catch { env     = {}; }
     try { lights   = await lightsRes.json(); } catch { lights  = []; }
-    try { plugs    = await plugsRes.json(); } catch { plugs    = []; }
+    try { plugs    = await plugsRes.json(); }  catch { plugs   = []; }
+    try { groups   = await groupsRes.json(); } catch { groups  = []; }
 
     _settings = settings;
+    _lights   = Array.isArray(lights) ? lights : [];
     setStatus(true);
     renderFontColors(_settings.colors || {});
     renderColors(Array.isArray(colors) ? colors : []);
     renderWidgets(_settings.widgets || {});
     renderEnv(env);
-    renderDeviceList(Array.isArray(lights) ? lights : [], "lights");
+    renderDeviceList(_lights, "lights");
+    renderLightGroups(Array.isArray(groups) ? groups : []);
     renderDeviceList(Array.isArray(plugs)  ? plugs  : [], "plugs");
     renderLayout(_settings.layout  || {});
     document.getElementById("mirror-name").value   = _settings.mirror_name   || "";
     document.getElementById("calendar-days").value = _settings.calendar_days || 7;
+    renderSchedule(_settings.schedule || {});
+    loadTimers();
+    loadAlarms();
+    // Refresh timer countdowns every 5 s; alarms every 30 s
+    clearInterval(_timerPoll);
+    _timerPoll = setInterval(loadTimers, 5_000);
+    setInterval(loadAlarms, 30_000);
     loadModels();
     loadInstallStatus();
     checkUpdate();
@@ -952,6 +1273,184 @@ async function saveGeneral() {
   }
 }
 
+// ── Schedule ──────────────────────────────────────────────────────────────────
+function renderSchedule(sch) {
+  document.getElementById("schedule-enabled").checked      = sch.enabled      ?? false;
+  document.getElementById("schedule-sleep").value          = sch.sleep_time   ?? "23:00";
+  document.getElementById("schedule-wake").value           = sch.wake_time    ?? "07:00";
+  document.getElementById("schedule-wakeup-sound").checked = sch.wakeup_sound !== false;
+}
+
+document.getElementById("schedule-enabled").addEventListener("change", saveSchedule);
+document.getElementById("schedule-wakeup-sound").addEventListener("change", saveSchedule);
+
+async function saveSchedule() {
+  const schedule = {
+    enabled:      document.getElementById("schedule-enabled").checked,
+    sleep_time:   document.getElementById("schedule-sleep").value,
+    wake_time:    document.getElementById("schedule-wake").value,
+    wakeup_sound: document.getElementById("schedule-wakeup-sound").checked,
+  };
+  try {
+    const res  = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schedule }),
+    });
+    const data = await res.json();
+    if (data.ok) toast("Schedule saved");
+    else         toast("Error saving schedule", "err");
+  } catch {
+    toast("Save failed", "err");
+  }
+}
+
+// ── Timers ────────────────────────────────────────────────────────────────────
+let _timerPoll = null;
+
+function _fmtRemaining(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  return `${m}:${String(s).padStart(2,"0")}`;
+}
+
+async function loadTimers() {
+  try {
+    const res   = await fetch("/api/timers");
+    const items = await res.json();
+    renderTimers(Array.isArray(items) ? items : []);
+  } catch {
+    document.getElementById("timers-list").innerHTML =
+      '<div class="empty">Could not load timers</div>';
+  }
+}
+
+function renderTimers(timers) {
+  const el = document.getElementById("timers-list");
+  if (!timers.length) {
+    el.innerHTML = '<div class="empty">No active timers</div>';
+    return;
+  }
+  el.innerHTML = "";
+  timers.forEach(t => {
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `
+      <div class="item-info">
+        <div class="item-primary">${esc(_fmtRemaining(t.remaining))}</div>
+        <div class="item-sub">${esc(t.label)}${t.label ? " · " : ""}${Math.round(t.total_seconds/60)} min total</div>
+      </div>
+      <button class="btn-cancel" onclick="cancelTimer(${t.id})">Cancel</button>`;
+    el.appendChild(row);
+  });
+}
+
+async function setTimer() {
+  const dur   = document.getElementById("timer-duration").value.trim();
+  const label = document.getElementById("timer-label").value.trim();
+  if (!dur) { toast("Enter a duration", "info"); return; }
+  try {
+    const res  = await fetch("/api/timers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duration: dur, label }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`Timer set: ${data.human}`);
+      document.getElementById("timer-duration").value = "";
+      document.getElementById("timer-label").value    = "";
+      loadTimers();
+    } else {
+      toast(data.error || "Invalid duration", "err");
+    }
+  } catch {
+    toast("Failed to set timer", "err");
+  }
+}
+
+async function cancelTimer(id) {
+  await fetch("/api/timers/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  loadTimers();
+}
+
+// ── Alarms ────────────────────────────────────────────────────────────────────
+async function loadAlarms() {
+  try {
+    const res   = await fetch("/api/alarms");
+    const items = await res.json();
+    renderAlarms(Array.isArray(items) ? items : []);
+  } catch {
+    document.getElementById("alarms-list").innerHTML =
+      '<div class="empty">Could not load alarms</div>';
+  }
+}
+
+function _fmtAlarmTime(isoStr) {
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch { return isoStr; }
+}
+
+function renderAlarms(alarms) {
+  const el = document.getElementById("alarms-list");
+  if (!alarms.length) {
+    el.innerHTML = '<div class="empty">No active alarms</div>';
+    return;
+  }
+  el.innerHTML = "";
+  alarms.forEach(a => {
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `
+      <div class="item-info">
+        <div class="item-primary">${esc(_fmtAlarmTime(a.target_iso))}</div>
+        ${a.label ? `<div class="item-sub">${esc(a.label)}</div>` : ""}
+      </div>
+      <button class="btn-cancel" onclick="cancelAlarm(${a.id})">Cancel</button>`;
+    el.appendChild(row);
+  });
+}
+
+async function setAlarm() {
+  const time  = document.getElementById("alarm-time").value;
+  const label = document.getElementById("alarm-label").value.trim();
+  if (!time) { toast("Pick a time", "info"); return; }
+  try {
+    const res  = await fetch("/api/alarms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ time, label }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`Alarm set for ${data.human}`);
+      document.getElementById("alarm-label").value = "";
+      loadAlarms();
+    } else {
+      toast(data.error || "Could not set alarm", "err");
+    }
+  } catch {
+    toast("Failed to set alarm", "err");
+  }
+}
+
+async function cancelAlarm(id) {
+  await fetch("/api/alarms/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  loadAlarms();
+}
+
 // ── Font colors ───────────────────────────────────────────────────────────────
 const FONT_COLOR_DEFS = [
   { key: "text", label: "Primary text",    hint: "Event titles, tasks, clock time" },
@@ -1040,25 +1539,234 @@ async function saveEnv() {
   } catch { toast("Save failed", "err"); }
 }
 
-// ── Lights & Plugs ────────────────────────────────────────────────────────────
-function renderDeviceList(devices, type) {
-  const el = document.getElementById(`${type}-list`);
-  if (!devices.length) {
-    el.innerHTML = `<div class="empty">No ${type} added yet.</div>`;
+// ── Light Groups ──────────────────────────────────────────────────────────────
+let _lights = [];
+
+function renderLightGroups(groups) {
+  const el = document.getElementById("light-groups-list");
+  if (!groups.length) {
+    el.innerHTML = '<div class="empty">No groups yet — create one below.</div>';
+  } else {
+    el.innerHTML = "";
+    groups.forEach(g => {
+      const row = document.createElement("div");
+      row.className    = "device-row";
+      row.dataset.device = g.name;
+      const state = _lightState.get(g.name) || "";
+      const chips = g.members.map(m =>
+        `<span class="member-chip">${esc(m)}</span>`).join(" ");
+      row.innerHTML = `
+        <div class="device-main">
+          <div class="device-info">
+            <span class="device-name">${esc(g.name)}</span>
+          </div>
+          <div class="device-controls">
+            <div class="state-toggle" data-state="${state}">
+              <button class="on-btn"  onclick="controlLight('${esc(g.name)}','on',null,null)">On</button>
+              <button class="off-btn" onclick="controlLight('${esc(g.name)}','off',null,null)">Off</button>
+            </div>
+            <button class="btn-cancel" onclick="deleteLightGroup('${esc(g.name)}')">Delete</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;padding-top:2px">${chips}</div>`;
+      el.appendChild(row);
+    });
+  }
+  _renderGroupMemberChecks();
+}
+
+function _renderGroupMemberChecks() {
+  const container = document.getElementById("group-member-list");
+  if (!_lights.length) {
+    container.innerHTML = '<span style="font-size:13px;color:var(--text-dim)">Add lights above first</span>';
     return;
   }
+  container.innerHTML = "";
+  _lights.forEach(l => {
+    const id = `grpck-${l.name.replace(/\s+/g, "_")}`;
+    const label = document.createElement("label");
+    label.className = "member-check-label";
+    label.innerHTML = `<input type="checkbox" id="${esc(id)}" value="${esc(l.name)}"> ${esc(l.name)}`;
+    container.appendChild(label);
+  });
+}
+
+async function loadLightGroups() {
+  try {
+    const res    = await fetch("/api/light-groups");
+    const groups = await res.json();
+    renderLightGroups(Array.isArray(groups) ? groups : []);
+  } catch {
+    document.getElementById("light-groups-list").innerHTML =
+      '<div class="empty">Could not load groups</div>';
+  }
+}
+
+async function addLightGroup() {
+  const name    = document.getElementById("group-name").value.trim().toLowerCase();
+  const checked = [...document.querySelectorAll("#group-member-list input:checked")]
+                    .map(cb => cb.value);
+  if (!name)         { toast("Enter a group name", "info"); return; }
+  if (!checked.length) { toast("Select at least one light", "info"); return; }
+  try {
+    const res  = await fetch("/api/light-groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", name, members: checked }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`Group "${name}" created`);
+      document.getElementById("group-name").value = "";
+      document.querySelectorAll("#group-member-list input").forEach(cb => cb.checked = false);
+      loadLightGroups();
+    } else {
+      toast(data.error || "Error creating group", "err");
+    }
+  } catch {
+    toast("Failed to create group", "err");
+  }
+}
+
+async function deleteLightGroup(name) {
+  try {
+    const res  = await fetch("/api/light-groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", name }),
+    });
+    const data = await res.json();
+    if (data.ok) { toast(`Group "${name}" deleted`); loadLightGroups(); }
+    else toast(data.error || "Error", "err");
+  } catch { toast("Failed", "err"); }
+}
+
+// ── Lights & Plugs ────────────────────────────────────────────────────────────
+const _COLOR_SWATCHES = [
+  { name:"warm",   hex:"#ffc38a" },
+  { name:"cool",   hex:"#b8d4ff" },
+  { name:"white",  hex:"#ffffff" },
+  { name:"red",    hex:"#ff4444" },
+  { name:"green",  hex:"#44dd44" },
+  { name:"blue",   hex:"#4499ff" },
+  { name:"yellow", hex:"#ffee00" },
+  { name:"orange", hex:"#ff8c00" },
+  { name:"purple", hex:"#b040f0" },
+  { name:"pink",   hex:"#ff80b4" },
+  { name:"cyan",   hex:"#00e8e8" },
+];
+
+// Optimistic state maps — updated on every successful control action.
+const _lightState = new Map();
+const _plugState  = new Map();
+
+function _setStateInList(listId, name, state) {
+  const row = document.getElementById(listId)
+                       ?.querySelector(`[data-device="${CSS.escape(name)}"]`);
+  if (!row) return;
+  const tog = row.querySelector(".state-toggle");
+  if (tog) tog.dataset.state = state;
+}
+
+function _setLightState(name, state) {
+  _lightState.set(name, state);
+  _setStateInList("lights-list",       name, state);
+  _setStateInList("light-groups-list", name, state); // handles group names too
+}
+
+function _setPlugState(name, state) {
+  _plugState.set(name, state);
+  _setStateInList("plugs-list", name, state);
+}
+
+function renderDeviceList(devices, type) {
+  if (type === "lights") { renderLightList(devices); return; }
+  const el = document.getElementById("plugs-list");
+  if (!devices.length) { el.innerHTML = '<div class="empty">No plugs added yet.</div>'; return; }
   el.innerHTML = "";
-  devices.forEach(d => {
+  devices.forEach(p => {
     const row = document.createElement("div");
-    row.className = "color-row";
+    row.className = "device-row";
+    row.dataset.device = p.name;
+    const state = _plugState.get(p.name) || "";
     row.innerHTML = `
-      <div class="cal-name" style="flex:1">
-        <strong>${esc(d.name)}</strong>
-        <span style="color:var(--text-dim);font-size:12px;margin-left:8px">${esc(d.system)}</span>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${esc(d.native_id)}</div>
+      <div class="device-main">
+        <div class="device-info">
+          <span class="device-name">${esc(p.name)}</span>
+          <span class="device-badge">${esc(p.system)}</span>
+        </div>
+        <div class="device-controls">
+          <div class="state-toggle" data-state="${state}">
+            <button class="on-btn"  onclick="controlPlug('${esc(p.name)}','on')">On</button>
+            <button class="off-btn" onclick="controlPlug('${esc(p.name)}','off')">Off</button>
+          </div>
+          <button class="btn-cancel" onclick="deleteDevice('plugs','${esc(p.name)}')">✕</button>
+        </div>
+      </div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderLightList(lights) {
+  const el = document.getElementById("lights-list");
+  if (!lights.length) { el.innerHTML = '<div class="empty">No lights added yet.</div>'; return; }
+  el.innerHTML = "";
+  const swatchHtml = _COLOR_SWATCHES.map(c =>
+    `<span class="color-swatch" data-color="${c.name}"
+           style="background:${c.hex}" title="${c.name}"></span>`).join("");
+
+  lights.forEach(l => {
+    const sid   = "lc_" + l.name.replace(/[^a-z0-9]/gi, "_");
+    const state = _lightState.get(l.name) || "";
+    const row   = document.createElement("div");
+    row.className    = "device-row";
+    row.dataset.device = l.name;
+    row.innerHTML = `
+      <div class="device-main">
+        <div class="device-info">
+          <span class="device-name">${esc(l.name)}</span>
+          <span class="device-badge">${esc(l.system)}</span>
+        </div>
+        <div class="device-controls">
+          <div class="state-toggle" data-state="${state}">
+            <button class="on-btn"  onclick="controlLightFromRow('${esc(l.name)}','${sid}','on')">On</button>
+            <button class="off-btn" onclick="controlLight('${esc(l.name)}','off',null,null)">Off</button>
+          </div>
+          <button class="btn-cancel" onclick="deleteDevice('lights','${esc(l.name)}')">✕</button>
+        </div>
       </div>
-      <button class="btn" style="background:var(--red-bg);border-color:var(--red-bd);color:var(--red);padding:6px 12px;font-size:12px"
-              onclick="deleteDevice('${esc(type)}','${esc(d.name)}')">Remove</button>`;
+      <div class="device-extra">
+        <label class="extra-label">
+          <span>Brightness</span>
+          <input type="range" id="${sid}_br" min="10" max="100" value="80">
+          <span id="${sid}_brv" class="brightness-val">80%</span>
+        </label>
+        <div class="extra-label">
+          <span>Color</span>
+          <div class="color-swatches" id="${sid}_sw">${swatchHtml}</div>
+          <span class="color-none selected" id="${sid}_none" title="no color change">—</span>
+        </div>
+      </div>`;
+
+    // Brightness live label
+    row.querySelector(`#${sid}_br`).addEventListener("input", e =>
+      row.querySelector(`#${sid}_brv`).textContent = e.target.value + "%");
+
+    // Color swatch selection
+    const swWrap = row.querySelector(`#${sid}_sw`);
+    const noneEl = row.querySelector(`#${sid}_none`);
+    swWrap.querySelectorAll(".color-swatch").forEach(sw => {
+      sw.addEventListener("click", () => {
+        swWrap.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
+        noneEl.classList.remove("selected");
+        sw.classList.add("selected");
+      });
+    });
+    noneEl.addEventListener("click", () => {
+      swWrap.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
+      noneEl.classList.add("selected");
+    });
+
     el.appendChild(row);
   });
 }
@@ -1067,10 +1775,56 @@ async function loadDevices(type) {
   try {
     const res  = await fetch(`/api/${type}`);
     const data = await res.json();
-    if (Array.isArray(data)) renderDeviceList(data, type);
-    else document.getElementById(`${type}-list`).innerHTML =
-      `<div class="empty">${esc(data.error||"Error")}</div>`;
+    if (Array.isArray(data)) {
+      if (type === "lights") { _lights = data; _renderGroupMemberChecks(); }
+      renderDeviceList(data, type);
+    } else {
+      document.getElementById(`${type}-list`).innerHTML =
+        `<div class="empty">${esc(data.error||"Error")}</div>`;
+    }
   } catch { document.getElementById(`${type}-list`).innerHTML = '<div class="empty">Could not load.</div>'; }
+}
+
+// ── Light / plug control ──────────────────────────────────────────────────────
+async function controlLight(name, action, brightness, color) {
+  try {
+    const res  = await fetch("/api/lights/control", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ name, action,
+        brightness: brightness ?? undefined,
+        color: color || undefined }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`${name}: ${action}`);
+      _setLightState(name, action === "on" ? "on" : "off");
+    } else {
+      toast(data.error || "Error", "err");
+    }
+  } catch { toast("Failed to reach light", "err"); }
+}
+
+function controlLightFromRow(name, sid, action) {
+  const br  = parseInt(document.getElementById(`${sid}_br`).value, 10);
+  const sel = document.querySelector(`#${sid}_sw .color-swatch.selected`);
+  const col = sel ? sel.dataset.color : null;
+  controlLight(name, action, br, col);
+}
+
+async function controlPlug(name, action) {
+  try {
+    const res  = await fetch("/api/plugs/control", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ name, action }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`${name}: ${action}`);
+      _setPlugState(name, action === "on" ? "on" : "off");
+    } else {
+      toast(data.error || "Error", "err");
+    }
+  } catch { toast("Failed to reach plug", "err"); }
 }
 
 async function addDevice(type) {

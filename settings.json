@@ -11,6 +11,12 @@
     "alarm": true,
     "system": true
   },
+  "schedule": {
+    "enabled": true,
+    "sleep_time": "23:00",
+    "wake_time": "07:00",
+    "wakeup_sound": true
+  },
   "colors": {
     "text": "#ffffff",
     "mid": "#d6d6d6",

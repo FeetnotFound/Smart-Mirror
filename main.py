@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
     QStackedWidget,
 )
 from PySide6.QtCore import Qt, QThread, QTimer
+import ui_backend.audio_backend as _audio
+from ui_backend.schedule_backend import in_sleep_window, blank_display, unblank_display
 
 # AI is optional — the mirror runs as a display-only device without it.
 # Run install_ai.sh to add voice control.
@@ -301,6 +303,48 @@ class MirrorWindow(QMainWindow):
         event.accept()
 
 
+# ── Display schedule watcher ──────────────────────────────────────────────────
+
+class _ScheduleWatcher:
+    """Checks the sleep/wake schedule every minute and blanks/unblanks the display."""
+
+    def __init__(self) -> None:
+        self._sleeping: bool | None = None   # None = unknown (first tick)
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(60_000)
+        self._tick()
+
+    def _tick(self) -> None:
+        s = _load_settings().get("schedule", {})
+        if not s.get("enabled", False):
+            if self._sleeping is True:
+                # Schedule was disabled while screen was blanked — restore it.
+                unblank_display()
+            self._sleeping = None
+            return
+
+        sleeping = in_sleep_window(
+            s.get("sleep_time", "23:00"),
+            s.get("wake_time",  "07:00"),
+        )
+
+        if sleeping and self._sleeping is False:
+            blank_display()
+        elif not sleeping and self._sleeping is True:
+            unblank_display()
+            if s.get("wakeup_sound", True):
+                _audio.play("wakeup.wav")
+        elif self._sleeping is None:
+            # First tick — sync display state without playing sounds.
+            if sleeping:
+                blank_display()
+            else:
+                unblank_display()
+
+        self._sleeping = sleeping
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -321,7 +365,16 @@ def main() -> None:
 
     start_web_config()
 
+    # Wire alarm and timer callbacks to audio playback.
+    from ui_backend.alarm_backend import get_manager as _alarm_mgr
+    from ui_backend.timer_backend import get_manager as _timer_mgr
+    _alarm_mgr().on_fire   = lambda _a: _audio.play("alarm.wav")
+    _timer_mgr().on_finish = lambda _t: _audio.play("timer.wav")
+
     window.showFullScreen()              # use .show() while developing
+
+    # Start the display schedule watcher (kept alive by the event loop).
+    _schedule = _ScheduleWatcher()      # noqa: F841
 
     if _AI_AVAILABLE:
         preload_models()

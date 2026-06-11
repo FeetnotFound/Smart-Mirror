@@ -32,6 +32,7 @@ One-time setup, e.g. from a python shell:
     discover_lifx()                      # finds bulbs on the LAN
     get_registry().add("kitchen", "ha", "light.kitchen")   # HA added by hand
 """
+import json
 import os
 import sqlite3
 import threading
@@ -50,6 +51,12 @@ class Light:
     name: str          # friendly name, what the user says ("kitchen")
     system: str        # "hue" | "lifx" | "ha"
     native_id: str     # bridge int id / MAC / entity_id, as a string
+
+
+@dataclass
+class LightGroup:
+    name: str           # group name ("living room")
+    members: list[str]  # list of Light names that belong to this group
 
 
 class LightRegistry:
@@ -108,6 +115,69 @@ def get_registry() -> LightRegistry:
     if _registry is None:
         _registry = LightRegistry()
     return _registry
+
+
+# ── light groups ───────────────────────────────────────────────────────────────
+
+class LightGroupRegistry:
+    """Named groups of lights — stored in the same SQLite DB as individual lights."""
+
+    def __init__(self, db_path: Path = DB_PATH) -> None:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._db_path = db_path
+        self._lock = threading.Lock()
+        self._init_db()
+
+    def _conn(self) -> sqlite3.Connection:
+        return sqlite3.connect(self._db_path)
+
+    def _init_db(self) -> None:
+        with self._conn() as c:
+            c.execute("""CREATE TABLE IF NOT EXISTS light_groups (
+                name TEXT PRIMARY KEY,
+                members TEXT NOT NULL)""")   # members = JSON array of light names
+
+    def add(self, name: str, members: list[str]) -> LightGroup:
+        name = str(name).lower().strip()
+        if not name:
+            raise ValueError("group name cannot be empty")
+        if not members:
+            raise ValueError("a group must have at least one member")
+        members = [str(m).lower().strip() for m in members]
+        with self._lock, self._conn() as c:
+            c.execute("""INSERT INTO light_groups (name, members) VALUES (?,?)
+                         ON CONFLICT(name) DO UPDATE SET members=excluded.members""",
+                      (name, json.dumps(members)))
+        return LightGroup(name, members)
+
+    def remove(self, name: str) -> bool:
+        with self._lock, self._conn() as c:
+            return c.execute("DELETE FROM light_groups WHERE name=?",
+                             (str(name).lower().strip(),)).rowcount > 0
+
+    def get(self, name: str) -> Optional[LightGroup]:
+        with self._conn() as c:
+            row = c.execute("SELECT name, members FROM light_groups WHERE name=?",
+                            (str(name).lower().strip(),)).fetchone()
+        if row is None:
+            return None
+        return LightGroup(row[0], json.loads(row[1]))
+
+    def list(self) -> list[LightGroup]:
+        with self._conn() as c:
+            rows = c.execute(
+                "SELECT name, members FROM light_groups ORDER BY name").fetchall()
+        return [LightGroup(r[0], json.loads(r[1])) for r in rows]
+
+
+_group_registry: Optional[LightGroupRegistry] = None
+
+
+def get_group_registry() -> LightGroupRegistry:
+    global _group_registry
+    if _group_registry is None:
+        _group_registry = LightGroupRegistry()
+    return _group_registry
 
 
 # ── adapters ────────────────────────────────────────────────────────────────
@@ -322,10 +392,12 @@ def control_light(action: str, device_name: str = "all",
                   brightness: Optional[int] = None,
                   color: Optional[str] = None) -> str:
     """Router entry point. action in {on,turn_on,off,turn_off}. device_name is a
-    friendly name from the registry, or "all" to hit every registered light."""
-    on = str(action).lower() in ("on", "turn_on")
-    reg = get_registry()
+    friendly name (individual light or group name), or "all" for every light."""
+    on   = str(action).lower() in ("on", "turn_on")
+    reg  = get_registry()
+    greg = get_group_registry()
     name = str(device_name).lower().strip()
+    verb = "Turning on" if on else "Turning off"
 
     if name in ("all", "", "lights", "the lights"):
         lights = reg.list()
@@ -334,17 +406,28 @@ def control_light(action: str, device_name: str = "all",
         results = [_set_one(l, on, brightness, color) for l in lights]
         if not any(results):
             return "I couldn't reach the lights."
-        verb = "Turning on" if on else "Turning off"
-        if all(results):
-            return f"{verb} all the lights."
-        return f"{verb} the lights — some didn't respond."
+        return f"{verb} all the lights." if all(results) \
+               else f"{verb} the lights — some didn't respond."
+
+    # Check groups first — a group name takes priority over a same-named individual.
+    group = greg.get(name)
+    if group is not None:
+        lights = [reg.get(m) for m in group.members]
+        lights = [l for l in lights if l is not None]
+        if not lights:
+            return f"The group {device_name!r} has no registered lights."
+        results = [_set_one(l, on, brightness, color) for l in lights]
+        if not any(results):
+            return f"I couldn't reach any lights in {device_name}."
+        return f"{verb} {device_name}." if all(results) \
+               else f"{verb} {device_name} — some lights didn't respond."
 
     light = reg.get(name)
     if light is None:
-        return f"I don't know a light called {device_name}."
+        return f"I don't know a light called {device_name!r}."
     if not _set_one(light, on, brightness, color):
         return f"I couldn't reach {device_name}."
-    return f"{'Turning on' if on else 'Turning off'} {device_name}."
+    return f"{verb} {device_name}."
 
 
 # ── one-time discovery helpers ──────────────────────────────────────────────

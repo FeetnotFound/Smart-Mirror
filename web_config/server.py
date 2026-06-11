@@ -46,6 +46,12 @@ _DEFAULTS: dict = {
         "alarm":    True,
         "system":   True,
     },
+    "schedule": {
+        "enabled":      False,
+        "sleep_time":   "23:00",
+        "wake_time":    "07:00",
+        "wakeup_sound": True,
+    },
 }
 
 _lock = threading.Lock()
@@ -134,6 +140,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/lights":        self._get_lights()
             elif path == "/api/plugs":         self._get_plugs()
             elif path == "/api/update/check":  self._get_update_check()
+            elif path == "/api/timers":        self._get_timers()
+            elif path == "/api/alarms":        self._get_alarms()
+            elif path == "/api/light-groups":  self._get_light_groups()
+            elif path == "/api/lights/control": self._send_json({"error": "POST only"}, 405)
+            elif path == "/api/plugs/control":  self._send_json({"error": "POST only"}, 405)
 
             else:
                 self._send_json({"error": "not found"}, 404)
@@ -185,6 +196,139 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json({"error": str(e)}, 500)
 
+    def _control_light(self, data: dict):
+        name   = str(data.get("name",   "all")).strip()
+        action = str(data.get("action", "on")).strip()
+        brightness = data.get("brightness")
+        color      = data.get("color") or None
+        try:
+            brightness = int(brightness) if brightness is not None else None
+        except (TypeError, ValueError):
+            brightness = None
+        try:
+            from ui_backend.light_backend import control_light
+            msg = control_light(action, name, brightness, color)
+            self._send_json({"ok": True, "message": msg})
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _control_plug(self, data: dict):
+        name   = str(data.get("name",   "all")).strip()
+        action = str(data.get("action", "on")).strip()
+        try:
+            from ui_backend.plug_backend import control_plug
+            msg = control_plug(action, name)
+            self._send_json({"ok": True, "message": msg})
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _get_light_groups(self):
+        try:
+            from ui_backend.light_backend import get_group_registry
+            groups = [{"name": g.name, "members": g.members}
+                      for g in get_group_registry().list()]
+            self._send_json(groups)
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _post_light_group(self, data: dict):
+        action = str(data.get("action", "")).strip()
+        name   = str(data.get("name",   "")).strip().lower()
+        try:
+            from ui_backend.light_backend import get_group_registry
+            reg = get_group_registry()
+            if action == "delete":
+                self._send_json({"ok": reg.remove(name)})
+            elif action == "add":
+                members = data.get("members", [])
+                if not isinstance(members, list) or not members:
+                    self._send_json({"ok": False,
+                                     "error": "members must be a non-empty list"}, 400)
+                    return
+                if not name:
+                    self._send_json({"ok": False, "error": "name required"}, 400)
+                    return
+                reg.add(name, members)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"ok": False,
+                                 "error": f"unknown action {action!r}"}, 400)
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _get_timers(self):
+        try:
+            from ui_backend.timer_backend import get_manager
+            timers = [
+                {"id": t.id, "label": t.label,
+                 "remaining": t.remaining, "total_seconds": t.total_seconds}
+                for t in get_manager().active()
+            ]
+            self._send_json(timers)
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _post_timer(self, data: dict):
+        duration = str(data.get("duration", "")).strip()
+        label    = str(data.get("label",    "")).strip()
+        if not duration:
+            self._send_json({"ok": False, "error": "duration required"}, 400)
+            return
+        try:
+            from ui_backend.timer_backend import get_manager, parse_duration
+            secs = parse_duration(duration)
+            t = get_manager().set_timer(duration, label)
+            mins, s = divmod(t.total_seconds, 60)
+            human = f"{mins}m {s}s" if mins else f"{s}s"
+            self._send_json({"ok": True, "id": t.id, "human": human})
+        except ValueError as e:
+            self._send_json({"ok": False, "error": str(e)}, 400)
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _cancel_timer(self, data: dict):
+        try:
+            from ui_backend.timer_backend import get_manager
+            ok = get_manager().cancel(int(data.get("id", 0)))
+            self._send_json({"ok": ok})
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _get_alarms(self):
+        try:
+            from ui_backend.alarm_backend import get_manager
+            alarms = [
+                {"id": a.id, "label": a.label, "target_iso": a.target_iso}
+                for a in get_manager().active()
+            ]
+            self._send_json(alarms)
+        except Exception as e:
+            self._send_json({"error": str(e)}, 500)
+
+    def _post_alarm(self, data: dict):
+        time_str = str(data.get("time",  "")).strip()
+        label    = str(data.get("label", "")).strip()
+        if not time_str:
+            self._send_json({"ok": False, "error": "time required"}, 400)
+            return
+        try:
+            from ui_backend.alarm_backend import get_manager
+            a = get_manager().set_alarm(time_str, label)
+            human = a.target.strftime("%-I:%M %p")
+            self._send_json({"ok": True, "id": a.id, "human": human})
+        except ValueError as e:
+            self._send_json({"ok": False, "error": str(e)}, 400)
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _cancel_alarm(self, data: dict):
+        try:
+            from ui_backend.alarm_backend import get_manager
+            ok = get_manager().cancel(int(data.get("id", 0)))
+            self._send_json({"ok": ok})
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
     # ── POST ──────────────────────────────────────────────────────────────
     def do_POST(self):
         path = self.path.split("?")[0]
@@ -214,6 +358,17 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                             if name in current["widgets"]:
                                 current["widgets"][name] = bool(visible)
                                 _emit("show" if visible else "hide", name)
+                    if "schedule" in data and isinstance(data["schedule"], dict):
+                        sch = data["schedule"]
+                        cur_sch = current.setdefault("schedule", {})
+                        if "enabled" in sch:
+                            cur_sch["enabled"] = bool(sch["enabled"])
+                        if "sleep_time" in sch:
+                            cur_sch["sleep_time"] = str(sch["sleep_time"])[:5]
+                        if "wake_time" in sch:
+                            cur_sch["wake_time"] = str(sch["wake_time"])[:5]
+                        if "wakeup_sound" in sch:
+                            cur_sch["wakeup_sound"] = bool(sch["wakeup_sound"])
                     save_settings(current)
                 _emit("reload")
                 self._send_json({"ok": True})
@@ -233,6 +388,14 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                     )
                 _emit("refresh", "calendar")
                 self._send_json({"ok": True})
+
+            elif path == "/api/timers":        self._post_timer(data)
+            elif path == "/api/timers/cancel": self._cancel_timer(data)
+            elif path == "/api/alarms":        self._post_alarm(data)
+            elif path == "/api/alarms/cancel": self._cancel_alarm(data)
+            elif path == "/api/light-groups":       self._post_light_group(data)
+            elif path == "/api/lights/control":     self._control_light(data)
+            elif path == "/api/plugs/control":      self._control_plug(data)
 
             elif path == "/api/install/status":
                 self._send_json(_install_status())
