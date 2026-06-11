@@ -217,9 +217,9 @@ if [[ -f "${CONFIG_TXT}" ]]; then
     if ! grep -q "vc4-kms-v3d" "${CONFIG_TXT}"; then
         # Insert into [pi4] block if present, otherwise append under [all]
         if grep -q "^\[pi4\]" "${CONFIG_TXT}"; then
-            sed -i '/^\[pi4\]/a dtoverlay=vc4-kms-v3d\ngpu_mem=128' "${CONFIG_TXT}"
+            sed -i '/^\[pi4\]/a dtoverlay=vc4-fkms-v3d\ngpu_mem=128' "${CONFIG_TXT}"
         else
-            printf '\n[all]\ndtoverlay=vc4-kms-v3d\ngpu_mem=128\n' >> "${CONFIG_TXT}"
+            printf '\n[all]\ndtoverlay=vc4-fkms-v3d\ngpu_mem=128\n' >> "${CONFIG_TXT}"
         fi
         info "vc4-kms-v3d overlay added to ${CONFIG_TXT}"
     else
