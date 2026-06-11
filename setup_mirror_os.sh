@@ -185,6 +185,19 @@ systemctl daemon-reload
 systemctl enable --now mirror-autoupdate.timer
 info "Auto-update enabled — checks for updates nightly at 3 AM"
 
+# ── 11b. Shairport-sync (AirPlay) ────────────────────────────────────────────
+step "Shairport-sync (AirPlay)"
+apt-get install -y shairport-sync
+mkdir -p /etc/systemd/system/shairport-sync.service.d
+cat > /etc/systemd/system/shairport-sync.service.d/mirror.conf <<EOF
+[Service]
+User=${MIRROR_USER}
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+EOF
+systemctl daemon-reload
+systemctl enable --now shairport-sync
+info "Shairport-sync enabled — AirPlay receiver active"
+
 # ── 11. Firewall ──────────────────────────────────────────────────────────────
 step "Firewall"
 if command -v ufw &>/dev/null; then
