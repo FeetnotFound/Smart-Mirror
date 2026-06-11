@@ -71,6 +71,7 @@ fi
 step "Copy project to ${INSTALL_DIR}"
 rsync -a --exclude='.mirror/' --exclude='__pycache__/' --exclude='*.pyc' \
   "${SCRIPT_DIR}/" "${INSTALL_DIR}/"
+mkdir -p "${INSTALL_DIR}/ui_backend/data"
 chown -R "${MIRROR_USER}:${MIRROR_USER}" "${INSTALL_DIR}"
 info "Project synced"
 
@@ -164,8 +165,7 @@ WorkingDirectory=${INSTALL_DIR}
 ExecStart=/bin/bash -c '\
     git pull origin main 2>&1 | tee -a /var/log/mirror-update.log && \
     ${INSTALL_DIR}/.mirror/bin/pip install -q -r ${INSTALL_DIR}/requirements-base.txt \
-        >> /var/log/mirror-update.log 2>&1 && \
-    systemctl restart mirror-web 2>/dev/null || true'
+        >> /var/log/mirror-update.log 2>&1'
 StandardOutput=journal
 StandardError=journal
 EOF
@@ -190,12 +190,34 @@ info "Auto-update enabled — checks for updates nightly at 3 AM"
 # ── 11b. Shairport-sync (AirPlay) ────────────────────────────────────────────
 step "Shairport-sync (AirPlay)"
 apt-get install -y shairport-sync
+
+# Run as mirror user so it can reach the PipeWire audio session
 mkdir -p /etc/systemd/system/shairport-sync.service.d
 cat > /etc/systemd/system/shairport-sync.service.d/mirror.conf <<EOF
 [Service]
 User=${MIRROR_USER}
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 EOF
+
+# D-Bus policy: allow mirror user to own the MPRIS bus name
+cat > /etc/dbus-1/system.d/shairport-sync.conf <<EOF
+<!DOCTYPE busconfig PUBLIC
+ "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="${MIRROR_USER}">
+    <allow own="org.mpris.MediaPlayer2.ShairportSync"/>
+    <allow own="org.gnome.ShairportSync"/>
+  </policy>
+  <policy context="default">
+    <allow send_destination="org.mpris.MediaPlayer2.ShairportSync"/>
+    <allow receive_sender="org.mpris.MediaPlayer2.ShairportSync"/>
+    <allow send_destination="org.gnome.ShairportSync"/>
+    <allow receive_sender="org.gnome.ShairportSync"/>
+  </policy>
+</busconfig>
+EOF
+systemctl reload dbus || true
 systemctl daemon-reload
 systemctl enable --now shairport-sync
 info "Shairport-sync enabled — AirPlay receiver active"
