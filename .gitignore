@@ -21,7 +21,6 @@ models/router_models/
 # ── OS build artifacts ────────────────────────────────────────────────────────
 build_distro.sh
 flash.sh
-setup_mirror_os.sh
 Dockerfile
 docker/
 .build/
