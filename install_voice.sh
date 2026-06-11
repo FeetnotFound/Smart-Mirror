@@ -28,11 +28,6 @@ fi
 source "$VENV_DIR/bin/activate"
 info "Using venv: $VENV_DIR"
 
-# ── System packages ───────────────────────────────────────────────────────────
-info "Installing system packages (requires sudo)..."
-sudo apt-get update -qq
-sudo apt-get install -y alsa-utils libdbus-1-dev portaudio19-dev
-
 # ── Python packages ───────────────────────────────────────────────────────────
 info "Installing RealtimeSTT and Piper TTS..."
 info "  Downloads PyTorch + Whisper model (~1-2 GB) on first run."

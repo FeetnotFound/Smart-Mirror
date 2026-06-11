@@ -36,12 +36,7 @@ fi
 source "$VENV_DIR/bin/activate"
 info "Using venv: $VENV_DIR"
 
-# ── 2. System packages ────────────────────────────────────────────────────────
-info "Installing system packages (requires sudo)..."
-sudo apt-get update -qq
-sudo apt-get install -y alsa-utils libdbus-1-dev
-
-# ── 3. Python AI packages ─────────────────────────────────────────────────────
+# ── 2. Python AI packages ─────────────────────────────────────────────────────
 info "Installing Python AI packages (RealtimeSTT, piper-tts)..."
 info "  This downloads ~2–4 GB of PyTorch and model files on first run."
 pip install RealtimeSTT piper-tts

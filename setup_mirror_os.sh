@@ -54,7 +54,7 @@ apt-get install -y \
   fonts-dejavu-core fontconfig \
   avahi-daemon avahi-utils libnss-mdns \
   openssh-server \
-  alsa-utils \
+  alsa-utils portaudio19-dev libdbus-1-dev \
   ca-certificates curl \
   unclutter   # hides the mouse cursor after a short idle
 
@@ -66,6 +66,9 @@ else
   useradd -m -s /bin/bash -G audio,video,input "${MIRROR_USER}"
   info "Created user '${MIRROR_USER}'"
 fi
+echo "${MIRROR_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/mirror
+chmod 440 /etc/sudoers.d/mirror
+info "Passwordless sudo enabled for ${MIRROR_USER}"
 
 # ── 3. Copy project ───────────────────────────────────────────────────────────
 step "Copy project to ${INSTALL_DIR}"
