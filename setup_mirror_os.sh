@@ -81,6 +81,8 @@ info "Project synced"
 # ── 4. Python venv + dependencies ─────────────────────────────────────────────
 step "Python environment"
 sudo -u "${MIRROR_USER}" bash "${INSTALL_DIR}/install.sh"
+# Re-own everything after install in case any step created root-owned files
+chown -R "${MIRROR_USER}:${MIRROR_USER}" "${INSTALL_DIR}"
 
 # ── 5. Grant port-80 capability ───────────────────────────────────────────────
 step "Port 80 capability"

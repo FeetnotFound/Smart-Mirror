@@ -29,8 +29,12 @@ source "$VENV_DIR/bin/activate"
 info "Using venv: $VENV_DIR"
 
 # ── Python packages ───────────────────────────────────────────────────────────
+# Install CPU-only PyTorch first so RealtimeSTT doesn't pull in CUDA (multi-GB,
+# useless on Pi/non-NVIDIA hardware).
+info "Installing CPU-only PyTorch..."
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
 info "Installing RealtimeSTT and Piper TTS..."
-info "  Downloads PyTorch + Whisper model (~1-2 GB) on first run."
 pip install RealtimeSTT piper-tts
 
 # ── Done ──────────────────────────────────────────────────────────────────────

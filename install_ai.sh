@@ -37,8 +37,11 @@ source "$VENV_DIR/bin/activate"
 info "Using venv: $VENV_DIR"
 
 # ── 2. Python AI packages ─────────────────────────────────────────────────────
-info "Installing Python AI packages (RealtimeSTT, piper-tts)..."
-info "  This downloads ~2–4 GB of PyTorch and model files on first run."
+# Install CPU-only PyTorch first so RealtimeSTT doesn't pull in CUDA.
+info "Installing CPU-only PyTorch..."
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+info "Installing RealtimeSTT and Piper TTS..."
 pip install RealtimeSTT piper-tts
 
 # ── 4. Ollama ─────────────────────────────────────────────────────────────────

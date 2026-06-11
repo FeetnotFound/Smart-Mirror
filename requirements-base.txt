@@ -1,8 +1,9 @@
 # Core mirror runtime — no AI, no AirPlay audio
 PySide6        # Qt desktop UI
 requests       # HTTP (Hue bridge, Home Assistant)
+urllib3<2      # urllib3 2.x ships a QUIC/HTTP3 backend (hface) that breaks on Pi with OSError EIO
 psutil         # system_info_widget — CPU / RAM / temp / uptime
-caldav         # calendar_backend — iCloud CalDAV sync
+caldav==1.2.1  # calendar_backend — newer versions use niquests/HTTP3 which breaks on Pi (GSO unsupported)
 icalendar      # calendar_backend — iCal event parsing
 python-dotenv  # load variables.env
 
