@@ -100,11 +100,27 @@ else
 fi
 
 # ── 6. Fix ownership ──────────────────────────────────────────────────────────
-# sudo calls above (apt-get, setcap) can leave some files root-owned.
-# Re-own the entire project tree back to the calling user.
 step "Fixing file ownership"
 sudo chown -R "${CURRENT_USER}:${CURRENT_USER}" "${PROJECT_DIR}"
 info "Ownership set to ${CURRENT_USER}"
+
+# ── 7. Update .xinitrc to point at this directory ─────────────────────────────
+# Handles re-cloning to a different folder name (e.g. mirror → Smart-Mirror).
+XINITRC="${HOME}/.xinitrc"
+if [ -f "$XINITRC" ]; then
+  step "Updating .xinitrc"
+  # Extract the old project path from the Python binary line in .xinitrc
+  OLD_PATH=$(grep -o '"[^"]*\.mirror/bin/python"' "$XINITRC" \
+             | sed 's|"||g;s|/.mirror/bin/python||' | head -1)
+  if [ -n "$OLD_PATH" ] && [ "$OLD_PATH" != "$PROJECT_DIR" ]; then
+    sed -i "s|${OLD_PATH}|${PROJECT_DIR}|g" "$XINITRC"
+    info ".xinitrc updated: $(basename "$OLD_PATH") → $(basename "$PROJECT_DIR")"
+  else
+    info ".xinitrc already points to $PROJECT_DIR"
+  fi
+else
+  warn ".xinitrc not found — run setup_mirror_os.sh to create it"
+fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""

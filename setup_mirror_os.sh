@@ -4,7 +4,7 @@
 # What this does:
 #   1. Installs Xorg and all runtime dependencies
 #   2. Creates a dedicated 'mirror' user
-#   3. Copies this project to /home/mirror/mirror/
+#   3. Copies this project to /home/mirror/<dirname>/  (matches this folder's name)
 #   4. Configures autologin → startx → mirror app on every boot
 #   5. Disables screensaver / DPMS (screen never blanks)
 #   6. Sets hostname to 'mirror' and enables mDNS (mirror.local)
@@ -24,7 +24,7 @@ set -euo pipefail
 
 MIRROR_USER="mirror"
 MIRROR_HOME="/home/${MIRROR_USER}"
-INSTALL_DIR="${MIRROR_HOME}/mirror"
+INSTALL_DIR="${MIRROR_HOME}/$(basename "${SCRIPT_DIR}")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
