@@ -528,32 +528,30 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             })
 
     def _post_update_apply(self):
+        # Send the response immediately — the update runs in the background
+        # and the mirror process exits via SIGTERM once done.
+        # Sending from a background thread after the handler returns causes
+        # a broken-pipe / "failed to fetch" on the client side.
+        self._send_json({"ok": True, "output": "Updating — mirror will restart in about 30 seconds."})
+
         def _do_update():
+            import time, signal
             try:
-                pull = subprocess.run(
+                subprocess.run(
                     ["git", "pull", "origin", "main"],
                     cwd=_PROJECT_ROOT, capture_output=True, text=True, timeout=60
                 )
-                pip = subprocess.run(
+                subprocess.run(
                     [str(_PROJECT_ROOT / ".mirror" / "bin" / "pip"),
                      "install", "-q", "-r",
                      str(_PROJECT_ROOT / "requirements-base.txt")],
                     capture_output=True, text=True, timeout=180
                 )
-                self._send_json({
-                    "ok": True,
-                    "output": pull.stdout.strip() or "Already up to date.",
-                    "pip": "packages updated" if pip.returncode == 0 else pip.stderr[:200],
-                })
-            except Exception as e:
-                self._send_json({"ok": False, "error": str(e)})
-                return
-            # Restart after the response is sent
-            import time, signal
-            time.sleep(1)
+            except Exception:
+                pass
+            time.sleep(2)
             os.kill(os.getpid(), signal.SIGTERM)
 
-        import threading
         threading.Thread(target=_do_update, daemon=True).start()
 
 

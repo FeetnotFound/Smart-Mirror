@@ -2511,10 +2511,10 @@ async function applyUpdate() {
       headers: {"Content-Type":"application/json"}, body: "{}" });
     const d = await r.json();
     if (d.ok) {
-      area.textContent = d.output + " — restarting mirror…";
+      area.textContent = "Update applied — waiting for mirror to restart…";
       btn.style.display = "none";
-      toast("Updated! Mirror will restart in a moment.");
-      setTimeout(checkUpdate, 8000);
+      toast("Updating — page will reload when the mirror is back.");
+      _pollUntilBack();
     } else {
       area.textContent = "Update failed: " + d.error;
       btn.disabled = false;
@@ -2525,6 +2525,27 @@ async function applyUpdate() {
     btn.disabled = false;
     btn.textContent = "Update & Restart";
   }
+}
+
+function _pollUntilBack() {
+  const area = document.getElementById("update-area");
+  let attempts = 0;
+  const iv = setInterval(async () => {
+    attempts++;
+    try {
+      const r = await fetch("/api/settings", { cache: "no-store" });
+      if (r.ok) {
+        clearInterval(iv);
+        area.textContent = "Mirror restarted — reloading page…";
+        setTimeout(() => location.reload(), 1000);
+      }
+    } catch {
+      if (attempts > 60) {          // give up after ~2 min
+        clearInterval(iv);
+        area.textContent = "Mirror may still be restarting — refresh the page manually.";
+      }
+    }
+  }, 2000);
 }
 </script>
 </body>
