@@ -170,46 +170,14 @@ def play_alert(kind: str) -> None:
 
 def _pick_wav(kind: str) -> Path:
     if kind == "wakeup":
-        tts = SOUNDS_DIR / "wakeup_tts.wav"
-        if not tts.exists():
-            _try_generate_tts("Good morning! Your alarm is going off.", tts)
-        return tts if tts.exists() else SOUNDS_DIR / "wakeup_chime.wav"
+        return SOUNDS_DIR / "wakeup_chime.wav"
+    # Alarm / timer: check for user-supplied custom file first.
+    # Drop sounds/klaxon_custom.wav (or .mp3 / .ogg) to use your own sound.
+    for ext in ("wav", "mp3", "ogg", "flac"):
+        custom = SOUNDS_DIR / f"klaxon_custom.{ext}"
+        if custom.exists():
+            return custom
     return SOUNDS_DIR / "klaxon.wav"
-
-
-def _try_generate_tts(text: str, out: Path) -> None:
-    """Generate a WAV via piper if a model is installed — silently skips if not."""
-    try:
-        import importlib.util
-        if importlib.util.find_spec("piper") is None:
-            return
-        from piper import PiperVoice
-        import wave as _wave
-
-        search_dirs = [
-            Path(__file__).resolve().parent.parent / "models" / "voice_models",
-            Path.home() / ".local" / "share" / "piper",
-        ]
-        model_path: Path | None = None
-        for d in search_dirs:
-            if d.exists():
-                found = list(d.glob("*.onnx"))
-                if found:
-                    model_path = found[0]
-                    break
-        if model_path is None:
-            return
-
-        voice = PiperVoice.load(str(model_path))
-        out.parent.mkdir(parents=True, exist_ok=True)
-        with _wave.open(str(out), "w") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(voice.config.sample_rate)
-            for chunk in voice.synthesize_stream_raw(text):
-                wf.writeframes(chunk)
-    except Exception:
-        pass
 
 
 def stop_alert() -> None:

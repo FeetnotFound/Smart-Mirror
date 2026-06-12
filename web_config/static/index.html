@@ -1038,6 +1038,14 @@ main > .card.full-width {
       <button class="btn btn-accent" id="btn-install-voice" onclick="runInstall('install_voice.sh','btn-install-voice','voice-install-status')">
         Install Voice Commands
       </button>
+      <div id="stt-toggle-row" style="display:none;margin-top:12px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                      color:var(--text-mid);font-size:13px">
+          <input type="checkbox" id="stt-enabled-chk" style="width:16px;height:16px"
+                 onchange="saveSttEnabled()">
+          Listen for wake word (STT active)
+        </label>
+      </div>
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">AI Responses</div>
@@ -2326,6 +2334,14 @@ async function loadInstallStatus() {
       }
     }
 
+    // STT toggle — show only if voice commands are installed
+    const sttRow = document.getElementById("stt-toggle-row");
+    const sttChk = document.getElementById("stt-enabled-chk");
+    if (data.voice_available && sttRow && sttChk) {
+      sttRow.style.display = "block";
+      sttChk.checked = data.stt_enabled !== false;
+    }
+
     // AI Responses
     const aiEl  = document.getElementById("ai-install-status");
     const aiBtn = document.getElementById("btn-install-ai");
@@ -2371,6 +2387,19 @@ async function saveTtsEnabled() {
       body: JSON.stringify({ tts_enabled: chk.checked }),
     });
     toast(chk.checked ? "TTS enabled" : "TTS disabled");
+  } catch { toast("Save failed", "err"); }
+}
+
+async function saveSttEnabled() {
+  const chk = document.getElementById("stt-enabled-chk");
+  if (!chk) return;
+  try {
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stt_enabled: chk.checked }),
+    });
+    toast(chk.checked ? "Wake word listening on" : "Wake word listening off");
   } catch { toast("Save failed", "err"); }
 }
 

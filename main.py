@@ -265,6 +265,12 @@ class MirrorWindow(QMainWindow):
             self._rebuild_ui()
             print("[UI] layout rebuilt from settings")
             return
+        if action == "stt_start":
+            self._start_stt()
+            return
+        if action == "stt_stop":
+            self._stop_stt()
+            return
         widget = self._widgets.get(module)
         if widget is None:
             print(f"[UI] unknown module: {module!r}")
@@ -284,6 +290,24 @@ class MirrorWindow(QMainWindow):
     def attach_stt(self, thread: "STTThread") -> None:
         """Keep a reference so closeEvent can stop the background thread."""
         self._stt = thread
+
+    def _start_stt(self) -> None:
+        if not _AI_AVAILABLE or self._stt is not None:
+            return
+        preload_models()
+        stt = STTThread()
+        self.attach_stt(stt)
+        stt.start()
+        print("[UI] STT started")
+
+    def _stop_stt(self) -> None:
+        stt = getattr(self, "_stt", None)
+        if stt is None:
+            return
+        stt.terminate()
+        stt.wait(3000)
+        self._stt = None
+        print("[UI] STT stopped")
 
     def keyPressEvent(self, event) -> None:
         # Esc (or Q) quits — fullscreen windows otherwise swallow Esc.
@@ -391,7 +415,7 @@ def main() -> None:
     # Start the display schedule watcher (kept alive by the event loop).
     _schedule = _ScheduleWatcher()      # noqa: F841
 
-    if _AI_AVAILABLE:
+    if _AI_AVAILABLE and _load_settings().get("stt_enabled", True):
         preload_models()
         stt = STTThread()
         window.attach_stt(stt)
