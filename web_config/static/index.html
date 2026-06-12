@@ -952,9 +952,16 @@ main > .card.full-width {
         </label>
       </div>
     </div>
-    <div class="field-group" style="border-top:1px solid var(--border)">
-      <div class="field-label" style="margin-bottom:6px">Audio Output Device</div>
-      <div class="field-hint" style="margin-bottom:8px">ALSA device for alarm and alert sounds. Leave blank to use the system default. Example: <code>plughw:2,0</code> for AIY Voice HAT on card 2.</div>
+  </div>
+
+  <!-- ── Audio ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Audio</span>
+    </div>
+    <div class="field-group">
+      <div class="field-label" style="margin-bottom:6px">Output Device</div>
+      <div class="field-hint" style="margin-bottom:8px">ALSA device for alert sounds. Leave blank to use the system default. Example: <code>plughw:2,0</code> for AIY Voice HAT on card 2.</div>
       <div class="field-row" style="gap:8px">
         <input class="field-input" id="alsa-device" placeholder="default (blank)"
                style="flex:1" autocomplete="off" spellcheck="false">
@@ -963,7 +970,7 @@ main > .card.full-width {
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">Alert Sound</div>
-      <div class="field-hint" style="margin-bottom:8px">Drop audio files into <code>sounds/</code> via SCP then click ↺ to refresh the list.</div>
+      <div class="field-hint" style="margin-bottom:8px">Drop audio files into <code>sounds/</code> via SCP then click ↺ to refresh.</div>
       <div class="field-row" style="gap:8px">
         <select id="alarm-sound" class="field-input" style="flex:1">
           <option value="">Built-in ascending chime</option>
@@ -974,7 +981,7 @@ main > .card.full-width {
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">Alert Volume</div>
-      <div class="field-hint" style="margin-bottom:8px">Volume for alarms, timers, and wakeup chimes. AirPlay music uses its own volume slider.</div>
+      <div class="field-hint" style="margin-bottom:8px">Volume for alarms, timers, and wakeup chimes. AirPlay music uses its own slider.</div>
       <div class="field-row" style="gap:12px;align-items:center">
         <input type="range" id="alarm-volume" min="0" max="100" value="50" style="flex:1;accent-color:var(--accent)">
         <span id="alarm-volume-pct" style="min-width:36px;text-align:right;font-size:13px">50%</span>
