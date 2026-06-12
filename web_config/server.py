@@ -40,6 +40,7 @@ _DEFAULTS: dict = {
     "tts_enabled":  True,
     "stt_enabled":  True,
     "alsa_device":  "",
+    "alarm_volume": 0.5,
     "widgets": {
         "terminal": True,
         "calendar": True,
@@ -380,6 +381,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                         current["tts_enabled"] = bool(data["tts_enabled"])
                     if "alsa_device" in data:
                         current["alsa_device"] = str(data["alsa_device"]).strip()[:64]
+                    if "alarm_volume" in data:
+                        v = float(data["alarm_volume"])
+                        current["alarm_volume"] = round(max(0.0, min(1.0, v)), 2)
                     if "stt_enabled" in data:
                         enabled = bool(data["stt_enabled"])
                         current["stt_enabled"] = enabled

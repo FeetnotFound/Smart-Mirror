@@ -23,12 +23,21 @@ _SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
 
 
 def _alsa_device() -> str:
-    """Return the configured ALSA device, or empty string to use system default."""
     try:
         data = json.loads(_SETTINGS_PATH.read_text())
         return str(data.get("alsa_device", "")).strip()
     except Exception:
         return ""
+
+
+def _alarm_volume() -> float:
+    """Return alarm_volume (0.0–1.0, default 0.5 = current built-in loudness)."""
+    try:
+        data = json.loads(_SETTINGS_PATH.read_text())
+        v = float(data.get("alarm_volume", 0.5))
+        return max(0.0, min(1.0, v))
+    except Exception:
+        return 0.5
 _SAMPLE_RATE = 44100
 
 # ── Alert state ───────────────────────────────────────────────────────────────
@@ -62,11 +71,11 @@ def _make_tone(path: Path, freq: float, duration: float, repeats: int = 1,
     _write_wav(path, data)
 
 
-def _make_klaxon(path: Path) -> None:
+def _make_klaxon(path: Path, volume: float = 0.5) -> None:
     """Star Wars Imperial klaxon: sawtooth two-tone alarm, 4 pairs + trailing silence."""
     SR = _SAMPLE_RATE
     data: list[int] = []
-    vol = 0.70
+    vol = min(1.0, 0.70 * (volume * 2))
 
     def _saw(freq: float, t: float) -> float:
         # Sawtooth Fourier series — harsh, metallic quality
@@ -90,8 +99,9 @@ def _make_klaxon(path: Path) -> None:
     _write_wav(path, data)
 
 
-def _make_wakeup_chime(path: Path) -> None:
+def _make_wakeup_chime(path: Path, volume: float = 0.5) -> None:
     """Gentle ascending three-note chime (E4 → G#4 → C5)."""
+    amp = min(1.0, 0.40 * (volume * 2))
     data: list[int] = []
     for freq in (330, 415, 523):
         dur = int(_SAMPLE_RATE * 0.5)
@@ -99,7 +109,7 @@ def _make_wakeup_chime(path: Path) -> None:
             t = n / _SAMPLE_RATE
             attack = min(n / (_SAMPLE_RATE * 0.04), 1.0)
             decay  = 1.0 - max(0.0, (n - dur * 0.65)) / (dur * 0.35 + 1)
-            data.append(int(0.4 * 32767 * math.sin(2 * math.pi * freq * t) * attack * decay))
+            data.append(int(amp * 32767 * math.sin(2 * math.pi * freq * t) * attack * decay))
         data.extend([0] * int(_SAMPLE_RATE * 0.1))
     data.extend([0] * int(_SAMPLE_RATE * 1.5))
     _write_wav(path, data)
@@ -110,23 +120,26 @@ _SOUNDS_VERSION = 2   # bump to force regeneration of all sounds
 def _ensure_sounds() -> None:
     SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
     ver_file = SOUNDS_DIR / ".version"
-    current_ver = int(ver_file.read_text().strip()) if ver_file.exists() else 0
-    if current_ver < _SOUNDS_VERSION:
+    vol = _alarm_volume()
+    # Version tag encodes both code version and current volume so any change
+    # in alarm_volume triggers a full regeneration with the new amplitude.
+    ver_tag = f"{_SOUNDS_VERSION}:{vol:.2f}"
+    stored  = ver_file.read_text().strip() if ver_file.exists() else ""
+    if stored != ver_tag:
         for f in SOUNDS_DIR.glob("*.wav"):
             f.unlink(missing_ok=True)
-        ver_file.write_text(str(_SOUNDS_VERSION))
+        ver_file.write_text(ver_tag)
 
     if not (SOUNDS_DIR / "klaxon.wav").exists():
-        _make_klaxon(SOUNDS_DIR / "klaxon.wav")
+        _make_klaxon(SOUNDS_DIR / "klaxon.wav", vol)
     if not (SOUNDS_DIR / "wakeup_chime.wav").exists():
-        _make_wakeup_chime(SOUNDS_DIR / "wakeup_chime.wav")
-    # Legacy names kept for any existing references
+        _make_wakeup_chime(SOUNDS_DIR / "wakeup_chime.wav", vol)
     if not (SOUNDS_DIR / "alarm.wav").exists():
-        _make_klaxon(SOUNDS_DIR / "alarm.wav")
+        _make_klaxon(SOUNDS_DIR / "alarm.wav", vol)
     if not (SOUNDS_DIR / "timer.wav").exists():
-        _make_klaxon(SOUNDS_DIR / "timer.wav")
+        _make_klaxon(SOUNDS_DIR / "timer.wav", vol)
     if not (SOUNDS_DIR / "wakeup.wav").exists():
-        _make_wakeup_chime(SOUNDS_DIR / "wakeup.wav")
+        _make_wakeup_chime(SOUNDS_DIR / "wakeup.wav", vol)
 
 
 # ── Playback helpers ──────────────────────────────────────────────────────────

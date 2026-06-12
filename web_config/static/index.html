@@ -961,6 +961,15 @@ main > .card.full-width {
         <button class="btn btn-accent" onclick="saveAlsaDevice()">Save</button>
       </div>
     </div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:6px">Alert Volume</div>
+      <div class="field-hint" style="margin-bottom:8px">Volume for alarms, timers, and wakeup chimes. AirPlay music uses its own volume slider.</div>
+      <div class="field-row" style="gap:12px;align-items:center">
+        <input type="range" id="alarm-volume" min="0" max="100" value="50" style="flex:1;accent-color:var(--accent)">
+        <span id="alarm-volume-pct" style="min-width:36px;text-align:right;font-size:13px">50%</span>
+        <button class="btn btn-accent" onclick="saveAlarmVolume()">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Timers ────────────────────────────────────────────────────────── -->
@@ -1146,6 +1155,12 @@ async function init() {
     document.getElementById("calendar-days").value = _settings.calendar_days || 7;
     renderSchedule(_settings.schedule || {});
     document.getElementById("alsa-device").value = _settings.alsa_device || "";
+    const vol = Math.round((_settings.alarm_volume ?? 0.5) * 100);
+    document.getElementById("alarm-volume").value = vol;
+    document.getElementById("alarm-volume-pct").textContent = vol + "%";
+    document.getElementById("alarm-volume").addEventListener("input", e => {
+      document.getElementById("alarm-volume-pct").textContent = e.target.value + "%";
+    });
     loadTimers();
     loadAlarms();
     pollAlertStatus();
@@ -1344,6 +1359,22 @@ async function saveSchedule() {
     const data = await res.json();
     if (data.ok) toast("Schedule saved");
     else         toast("Error saving schedule", "err");
+  } catch {
+    toast("Save failed", "err");
+  }
+}
+
+async function saveAlarmVolume() {
+  const val = parseInt(document.getElementById("alarm-volume").value) / 100;
+  try {
+    const res  = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alarm_volume: val }),
+    });
+    const data = await res.json();
+    if (data.ok) toast("Volume saved — applies on next alarm");
+    else         toast("Error saving", "err");
   } catch {
     toast("Save failed", "err");
   }
