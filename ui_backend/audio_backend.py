@@ -10,6 +10,7 @@ Alert API
   is_alert_active()                          — True while looping
   play(filename)                             — one-shot, non-blocking
 """
+import json
 import math
 import struct
 import subprocess
@@ -17,7 +18,17 @@ import threading
 import wave
 from pathlib import Path
 
-SOUNDS_DIR = Path(__file__).resolve().parent.parent / "sounds"
+SOUNDS_DIR    = Path(__file__).resolve().parent.parent / "sounds"
+_SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
+
+
+def _alsa_device() -> str:
+    """Return the configured ALSA device, or empty string to use system default."""
+    try:
+        data = json.loads(_SETTINGS_PATH.read_text())
+        return str(data.get("alsa_device", "")).strip()
+    except Exception:
+        return ""
 _SAMPLE_RATE = 44100
 
 # ── Alert state ───────────────────────────────────────────────────────────────
@@ -121,8 +132,10 @@ def _ensure_sounds() -> None:
 # ── Playback helpers ──────────────────────────────────────────────────────────
 
 def _aplay_once(path: Path) -> None:
+    dev = _alsa_device()
+    aplay_cmd = ["aplay", "-q"] + (["-D", dev] if dev else []) + [str(path)]
     for cmd in (
-        ["aplay", "-q", str(path)],
+        aplay_cmd,
         ["paplay", str(path)],
         ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(path)],
     ):

@@ -952,6 +952,15 @@ main > .card.full-width {
         </label>
       </div>
     </div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:6px">Audio Output Device</div>
+      <div class="field-hint" style="margin-bottom:8px">ALSA device for alarm and alert sounds. Leave blank to use the system default. Example: <code>plughw:2,0</code> for AIY Voice HAT on card 2.</div>
+      <div class="field-row" style="gap:8px">
+        <input class="field-input" id="alsa-device" placeholder="default (blank)"
+               style="flex:1" autocomplete="off" spellcheck="false">
+        <button class="btn btn-accent" onclick="saveAlsaDevice()">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Timers ────────────────────────────────────────────────────────── -->
@@ -1136,6 +1145,7 @@ async function init() {
     document.getElementById("mirror-name").value   = _settings.mirror_name   || "";
     document.getElementById("calendar-days").value = _settings.calendar_days || 7;
     renderSchedule(_settings.schedule || {});
+    document.getElementById("alsa-device").value = _settings.alsa_device || "";
     loadTimers();
     loadAlarms();
     pollAlertStatus();
@@ -1337,6 +1347,20 @@ async function saveSchedule() {
   } catch {
     toast("Save failed", "err");
   }
+}
+
+async function saveAlsaDevice() {
+  const val = document.getElementById("alsa-device").value.trim();
+  try {
+    const res  = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alsa_device: val }),
+    });
+    const data = await res.json();
+    if (data.ok) toast(val ? `Audio device set to ${val}` : "Audio device reset to system default");
+    else         toast("Error saving", "err");
+  } catch { toast("Save failed", "err"); }
 }
 
 // ── Timers ────────────────────────────────────────────────────────────────────

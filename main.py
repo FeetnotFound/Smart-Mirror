@@ -45,6 +45,7 @@ def _load_settings() -> dict:
         "calendar_days": 7,
         "tts_enabled": True,
         "stt_enabled": True,
+        "alsa_device": "",
         "widgets": {
             "terminal": True, "calendar": True, "tasks": True,
             "clock":    True, "next_up":  True, "timer": True,

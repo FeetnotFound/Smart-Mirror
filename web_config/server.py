@@ -37,8 +37,9 @@ DB_PATH       = _ROOT / "ui_backend" / "data" / "calendar.db"
 _DEFAULTS: dict = {
     "mirror_name": "MIRROR",
     "calendar_days": 7,
-    "tts_enabled": True,
-    "stt_enabled": True,
+    "tts_enabled":  True,
+    "stt_enabled":  True,
+    "alsa_device":  "",
     "widgets": {
         "terminal": True,
         "calendar": True,
@@ -377,6 +378,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                         current["ai_model"] = str(data["ai_model"])[:80]
                     if "tts_enabled" in data:
                         current["tts_enabled"] = bool(data["tts_enabled"])
+                    if "alsa_device" in data:
+                        current["alsa_device"] = str(data["alsa_device"]).strip()[:64]
                     if "stt_enabled" in data:
                         enabled = bool(data["stt_enabled"])
                         current["stt_enabled"] = enabled
