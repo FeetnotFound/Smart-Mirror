@@ -183,7 +183,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, _, v = line.partition("=")
-                    result[k.strip()] = v.strip()
+                    result[k.strip()] = bool(v.strip())  # True = set, never expose value
         self._send_json(result)
 
     def _get_lights(self):
@@ -447,9 +447,21 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
             elif path == "/api/env":
                 env_path = _ROOT / "variables.env"
-                lines = [f"{k.strip()}={v.strip()}"
-                         for k, v in data.items() if str(k).strip()]
-                env_path.write_text("\n".join(lines) + "\n")
+                # Read existing values so blank submissions preserve them
+                existing: dict[str, str] = {}
+                if env_path.exists():
+                    for line in env_path.read_text().splitlines():
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            ek, _, ev = line.partition("=")
+                            existing[ek.strip()] = ev.strip()
+                # Only overwrite keys where a non-empty new value was submitted
+                for k, v in data.items():
+                    if str(k).strip() and str(v).strip():
+                        existing[k.strip()] = str(v).strip()
+                env_path.write_text(
+                    "\n".join(f"{k}={v}" for k, v in existing.items()) + "\n"
+                )
                 self._send_json({"ok": True})
 
             elif path == "/api/update/apply":

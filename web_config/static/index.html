@@ -1658,43 +1658,63 @@ function renderFontColors(colors) {
 }
 
 // ── Environment variables ─────────────────────────────────────────────────────
-let _envData = {};
-
 function renderEnv(env) {
-  _envData = { ...env };
   const el = document.getElementById("env-list");
   el.innerHTML = "";
   if (!Object.keys(env).length) {
     el.innerHTML = '<div class="empty">No variables found in variables.env</div>';
     return;
   }
-  Object.entries(env).forEach(([k, v]) => {
+  Object.entries(env).forEach(([k, isSet]) => {
     const row = document.createElement("div");
     row.className = "field-group";
-    const isPassword = /password|token|secret|key/i.test(k);
     row.innerHTML = `
-      <div class="field-label">${esc(k)}</div>
-      <input class="field-input" type="${isPassword ? 'password' : 'text'}"
-             value="${esc(v)}" data-key="${esc(k)}" spellcheck="false" autocomplete="off">`;
-    const input = row.querySelector("input");
-    input.addEventListener("change", () => { _envData[k] = input.value; });
+      <div class="field-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(k)}</span>
+        <span style="font-size:11px;color:${isSet ? 'var(--accent)' : 'var(--text-dim)'}">
+          ${isSet ? '✓ set' : 'not set'}
+        </span>
+      </div>
+      <input class="field-input" type="password"
+             placeholder="${isSet ? 'Leave blank to keep existing value' : 'Enter value'}"
+             data-key="${esc(k)}" spellcheck="false" autocomplete="new-password">`;
     el.appendChild(row);
   });
   const saveRow = document.createElement("div");
   saveRow.className = "field-group";
-  saveRow.innerHTML = `<button class="btn btn-accent" onclick="saveEnv()">Save All</button>`;
+  saveRow.innerHTML = `<button class="btn btn-accent" onclick="saveEnv()">Save</button>`;
   el.appendChild(saveRow);
 }
 
 async function saveEnv() {
+  const updates = {};
+  document.querySelectorAll("#env-list input[data-key]").forEach(inp => {
+    if (inp.value.trim()) updates[inp.dataset.key] = inp.value.trim();
+  });
+  if (!Object.keys(updates).length) {
+    toast("Nothing to save — enter a value first", "info");
+    return;
+  }
   try {
     const res  = await fetch("/api/env", {
       method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(_envData),
+      body: JSON.stringify(updates),
     });
     const data = await res.json();
-    if (data.ok) toast("Environment saved — restart mirror to apply", "info");
-    else         toast(data.error || "Error", "err");
+    if (data.ok) {
+      toast("Saved — restart mirror to apply");
+      // Clear inputs and mark fields as set
+      document.querySelectorAll("#env-list input[data-key]").forEach(inp => {
+        if (updates[inp.dataset.key]) {
+          inp.value = "";
+          inp.placeholder = "Leave blank to keep existing value";
+          const lbl = inp.previousElementSibling.querySelector("span:last-child");
+          if (lbl) { lbl.textContent = "✓ set"; lbl.style.color = "var(--accent)"; }
+        }
+      });
+    } else {
+      toast(data.error || "Error", "err");
+    }
   } catch { toast("Save failed", "err"); }
 }
 
