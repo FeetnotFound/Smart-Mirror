@@ -29,6 +29,13 @@ warn()  { echo -e "${YELLOW}[install]${NC} $*"; }
 error() { echo -e "${RED}[install]${NC} $*" >&2; exit 1; }
 step()  { echo -e "\n${CYAN}══ $* ══${NC}"; }
 
+# ── 0. Fix ownership up front ─────────────────────────────────────────────────
+# git clone as root leaves files owned by root; chown before anything else so
+# venv creation and pip installs can write to the project directory.
+step "Fixing ownership"
+sudo chown -R "${CURRENT_USER}:${CURRENT_USER}" "${PROJECT_DIR}"
+info "Ownership set to ${CURRENT_USER}"
+
 # ── 1. System packages ────────────────────────────────────────────────────────
 step "System packages"
 sudo apt-get update -qq
