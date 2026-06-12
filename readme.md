@@ -1,88 +1,76 @@
 # Smart Mirror
 
-A fullscreen smart mirror UI with optional AI voice control. Runs on any x86 PC or can be flashed as a standalone OS image.
+A fullscreen smart mirror UI for any x86 PC or Raspberry Pi. Runs as a regular app or can be set up as a dedicated always-on kiosk with a single script.
 
 ## Features
 
 - **Widgets** — clock, calendar, tasks, timers, alarms, system stats, AirPlay music
-- **Voice control** (optional) — wake word → Whisper STT → keyword router → local LLM (Ollama) → Piper TTS, all offline
-- **Web config** — configure everything at `http://mirror.local` from your phone or any device on the same network
+- **Alarms** — repeating daily alarms, looping alert sound until dismissed, dismiss from web or voice
+- **Voice commands** (optional) — wake word → Whisper STT → keyword router → local LLM (Ollama) → Piper TTS, fully offline
+- **Web config** — configure everything at `http://mirror.local` from any device on the network
+- **AirPlay** — stream audio to the mirror via shairport-sync; now-playing widget shows track info
 - **OTA updates** — one-click update from GitHub in the web config
-- **Mirror OS** — bootable image you can flash with Balena Etcher or Raspberry Pi Imager
 
-## Quick Start
+## Install
+
+### On your existing machine (development / testing)
 
 ```bash
 git clone https://github.com/FeetnotFound/Smart-Mirror.git
 cd Smart-Mirror
-bash install.sh           # installs system packages + Python venv
-# edit variables.env      # add iCloud credentials
+bash install.sh
+```
+
+Edit `variables.env` with your credentials, then:
+
+```bash
 source .mirror/bin/activate
 python main.py
 ```
 
-Web config opens automatically at `http://<your-ip>` (port 80) or falls back to `http://<your-ip>:8080`.
+The web config is at `http://localhost` (port 80, requires `setcap`) or falls back to `http://localhost:8080`.
 
-To add voice control:
+### Dedicated machine (kiosk / Raspberry Pi)
+
+Turns a fresh **Ubuntu 22.04+ Server** or **Raspberry Pi OS Lite** install into a Mirror OS kiosk — autologin, X11, mirror app on boot:
+
+```bash
+sudo bash setup_mirror_os.sh
+sudo reboot
+```
+
+After reboot the mirror starts automatically. SSH in at `mirror.local`.
+
+## Add-Ons
+
+### Voice commands (speech recognition only)
+
+Wake word → timers, lights, alarms, tasks. No TTS, no LLM.
+
+```bash
+bash install_voice.sh
+```
+
+Downloads ~1–2 GB (Whisper model). No GPU required. Toggle STT on/off from the web config → Add-Ons.
+
+### AI responses (voice + TTS + LLM)
+
+Adds Piper TTS (spoken replies) and Ollama (conversational AI). Install voice commands first.
+
 ```bash
 bash install_ai.sh
 ```
 
-## Project Structure
+Downloads ~3–5 GB. GPU strongly recommended. Toggle TTS on/off from the web config → Add-Ons.
 
+### AirPlay receiver
+
+```bash
+bash install_shairport.sh
 ```
-.
-├── main.py                  Entry point — Qt window, layout, threads
-├── config.py                Ollama URL, model name, timeouts, log colors
-├── model_names.py           Piper voice model paths
-├── settings.json            Web-editable settings (name, widgets, layout, colors)
-├── variables.env            Secrets — iCloud credentials, Hue bridge (not in git)
-├── requirements-base.txt    Core dependencies (no AI)
-├── requirements.txt         Full dependencies including AI voice pipeline
-├── install.sh               Base setup — venv + core packages
-├── install_ai.sh            Add voice control (Ollama, Whisper, Piper)
-├── install_shairport.sh     Add AirPlay audio (shairport-sync)
-│
-├── ai/                      Voice pipeline
-│   ├── stt.py               Wake-word loop + Whisper transcription
-│   ├── tts.py               Piper → aplay streaming playback
-│   ├── llm.py               Ollama streaming entry point
-│   ├── executer.py          Response streaming + command dispatch
-│   ├── keyword_router.py    Fast rule-based intent router (default)
-│   └── router.py            Legacy LLM router (unused by default)
-│
-├── ui/                      Qt widgets
-│   ├── base_widget.py       Shared base class and theme constants
-│   ├── terminal.py          Live log + ANSI→HTML + stdout bridge
-│   ├── calendar_widget.py   Day-column calendar (reads SQLite)
-│   ├── clock_widget.py      Day / time / date with auto-scaling font
-│   ├── task_widget.py       Tap-to-complete task list
-│   ├── timer_widget.py      Countdown timer
-│   ├── alarm_widget.py      Alarm clock
-│   ├── next_up_widget.py    Next calendar event summary
-│   ├── system_info_widget.py CPU, RAM, temp, uptime
-│   └── music_widget.py      AirPlay now-playing (replaces system info)
-│
-├── ui_backend/              Data and control
-│   ├── calendar_backend.py  iCloud CalDAV → SQLite sync
-│   ├── task_backend.py      SQLite task CRUD
-│   ├── timer_backend.py     Countdown logic
-│   ├── alarm_backend.py     Alarm scheduling
-│   ├── music_backend.py     MPRIS D-Bus client for shairport-sync
-│   ├── system_info_backend.py psutil stats
-│   ├── light_backend.py     Hue / LIFX / Home Assistant (wire up _dispatch)
-│   ├── plug_backend.py      Kasa / Tapo smart plugs (wire up _dispatch)
-│   ├── web_search_backend.py DuckDuckGo search (wire up _dispatch)
-│   └── ui_control_backend.py Qt signal bus for widget commands
-│
-├── web_config/
-│   ├── server.py            HTTP REST API (Python built-in http.server)
-│   └── static/index.html   Single-page dark config UI
-│
-└── models/
-    ├── voice_models/        Piper .onnx voices (not in git — add your own)
-    └── router_models/       Legacy router weights (not in git)
-```
+
+Streams audio to the mirror and shows now-playing info on screen.  
+**AIY Voice HAT users**: set `output_device = "plughw:2,0"` in `/etc/shairport-sync.conf` and omit `mixer_control_name` (the HAT has no hardware volume controls).
 
 ## Configuration
 
@@ -98,7 +86,11 @@ HUE_USERNAME=<hue-api-key>               # optional
 
 ### Wake word
 
-Default is `mirror` (`HOT_WORDS` in `ai/stt.py`). Change it to whatever you want — the mirror strips it before sending to the LLM.
+Default is `mirror` (`HOT_WORDS` in `ai/stt.py`). Change it to anything — the mirror strips it before routing the command.
+
+### Custom alarm sound
+
+Drop a file named `sounds/klaxon_custom.wav` (also `.mp3`, `.ogg`, `.flac`) into the project and it will be used for all alarm and timer alerts. If no custom file is present, the gentle ascending chime plays instead.
 
 ### Voice models
 
@@ -113,52 +105,90 @@ Default is `qwen3:1.7b`. Change it in the web config → AI Model section, or ed
 Visit `http://mirror.local` (or the mirror's IP) from any device on the same network. The config page lets you:
 
 - Mirror name and accent colors
-- Widget visibility and layout (drag-and-drop)
-- Calendar days shown
-- iCloud calendar colors
-- AI model selection (shows installed Ollama models)
-- OTA updates (checks GitHub, one-click update + restart)
-- Add-on installation (voice control)
+- Widget visibility and layout
+- Calendar days shown and per-calendar colors
+- Alarms — set, cancel, daily repeat, dismiss active alert
+- iCloud / Hue / plug credentials
+- AI model selection
+- Add-Ons — install voice commands and AI responses; toggle STT and TTS independently
+- OTA updates
 
 Settings save to `settings.json`. Most take effect immediately without restart.
 
-## Mirror OS (Bootable Image)
+## Project Structure
 
-Build a standalone bootable image (no host OS required):
-
-```bash
-sudo bash build_distro.sh
 ```
-
-Flash with **Balena Etcher** or **Raspberry Pi Imager** (Use Custom Image). After flashing a `MIRRORCFG` partition appears — edit `wifi.conf` and `mirror.env` there before first boot.
-
-With **Raspberry Pi Imager**: click the ⚙ gear icon before writing to pre-configure WiFi without touching the partition.
+.
+├── main.py                  Entry point — Qt window, layout, threads
+├── config.py                Ollama URL, model name, timeouts, log colors
+├── model_names.py           Piper voice model paths
+├── settings.json            Web-editable settings (auto-created)
+├── variables.env            Secrets — iCloud, Hue credentials (not in git)
+├── install.sh               Base setup — venv + core Python packages
+├── install_voice.sh         Add speech recognition (RealtimeSTT / Whisper)
+├── install_ai.sh            Add AI responses (Ollama + Piper TTS)
+├── install_shairport.sh     Add AirPlay receiver (shairport-sync)
+├── setup_mirror_os.sh       Turn a fresh Ubuntu/Pi OS install into a kiosk
+├── requirements-base.txt    Core Python dependencies
+│
+├── ai/                      Voice pipeline
+│   ├── stt.py               Wake-word loop + Whisper transcription
+│   ├── tts.py               Piper → aplay streaming playback
+│   ├── llm.py               Ollama streaming entry point
+│   ├── executer.py          Response streaming + command dispatch
+│   ├── keyword_router.py    Fast rule-based intent router (default)
+│   └── router.py            LLM router (fallback)
+│
+├── ui/                      Qt widgets
+│   ├── base_widget.py       Shared base class and theme constants
+│   ├── terminal.py          Live log + ANSI→HTML + stdout bridge
+│   ├── calendar_widget.py   Day-column calendar (reads SQLite)
+│   ├── clock_widget.py      Day / time / date with auto-scaling font
+│   ├── task_widget.py       Tap-to-complete task list
+│   ├── timer_widget.py      Countdown timer (auto-removes when done)
+│   ├── alarm_widget.py      Alarms with daily-repeat indicator
+│   ├── next_up_widget.py    Next calendar event summary
+│   ├── system_info_widget.py CPU, RAM, temp, uptime
+│   └── music_widget.py      AirPlay now-playing
+│
+├── ui_backend/              Data and control
+│   ├── calendar_backend.py  iCloud CalDAV → SQLite sync
+│   ├── task_backend.py      SQLite task CRUD
+│   ├── timer_backend.py     Countdown logic
+│   ├── alarm_backend.py     Alarm scheduling with daily repeat
+│   ├── audio_backend.py     Looping alert sounds with dismiss
+│   ├── music_backend.py     MPRIS D-Bus client for shairport-sync
+│   ├── system_info_backend.py psutil stats
+│   ├── light_backend.py     Hue / LIFX / Home Assistant
+│   ├── plug_backend.py      Kasa / Tapo smart plugs
+│   └── ui_control_backend.py Qt signal bus for widget commands
+│
+├── web_config/
+│   ├── server.py            HTTP REST API (Python built-in http.server)
+│   └── static/index.html   Single-page dark config UI
+│
+├── sounds/                  Alert audio (auto-generated on first run)
+│   └── klaxon_custom.*      Drop your own alarm sound here (optional)
+│
+└── models/
+    └── voice_models/        Piper .onnx voices (not in git — add your own)
+```
 
 ## System Requirements
 
-| Component | Minimum | Recommended |
-|---|---|---|
-| OS | Debian 12 / Ubuntu 22.04+ | Mirror OS image |
-| Python | 3.11 | 3.11 |
-| RAM | 2 GB | 4 GB |
-| GPU | CPU (high latency) | NVIDIA CUDA (for voice) |
-
-Voice control works on CPU but expect 3–8 s latency. On a modern NVIDIA GPU it's under 1 s.
-
-## Dependencies
-
-| Package | Purpose | Install |
-|---|---|---|
-| **Ollama** | Local LLM inference | `bash install_ai.sh` or [ollama.com](https://ollama.com) |
-| **aplay** | Audio output for TTS | `sudo apt install alsa-utils` |
-| **libdbus-1-dev** | AirPlay music widget | `sudo apt install libdbus-1-dev` |
-| **shairport-sync** | AirPlay receiver | `bash install_shairport.sh` |
+| Component | Minimum |
+|-----------|---------|
+| OS | Ubuntu 22.04+ or Raspberry Pi OS (64-bit) |
+| Python | 3.11+ |
+| RAM | 2 GB (4 GB recommended for AI) |
+| GPU | Not required — voice control works on CPU (3–8 s latency) |
 
 ## License
+
 Copyright © 2026 Theodor Schermann. All rights reserved.
 
-No part of this software, including the source code, documentation, and design, 
-may be reproduced, distributed, or transmitted in any form or by any means, 
-including photocopying, recording, or other electronic or mechanical methods, 
+No part of this software, including the source code, documentation, and design,
+may be reproduced, distributed, or transmitted in any form or by any means,
+including photocopying, recording, or other electronic or mechanical methods,
 without the prior written permission of the copyright holder.
 See [LICENSE](LICENSE).
