@@ -251,6 +251,23 @@ class MirrorWindow(QMainWindow):
         if _AI_AVAILABLE:
             set_wake_word(_s["mirror_name"])
 
+        # Wire audio callbacks AFTER widgets set their own callbacks.
+        # TimerWidget.__init__ sets on_finish to its signal emitter; we wrap it
+        # so audio fires too. Must live here so rebuilds (settings saves) don't
+        # silently drop the audio hook.
+        from ui_backend.timer_backend import get_manager as _get_tmgr
+        from ui_backend.alarm_backend import get_manager as _get_amgr
+        _tmgr = _get_tmgr()
+        _wcb  = _tmgr.on_finish
+        def _on_timer_done(t, _wcb=_wcb):
+            _audio.play_alert("timer")
+            if _wcb:
+                _wcb(t)
+        _tmgr.on_finish = _on_timer_done
+        _get_amgr().on_fire = lambda a: _audio.play_alert(
+            "wakeup" if a.repeat_daily else "alarm"
+        )
+
     def _sync_music_slot(self) -> None:
         """Switch the system-info slot to Music when AirPlay is active."""
         self._sys_stack.setCurrentIndex(1 if self.music_widget.is_playing else 0)
@@ -391,27 +408,6 @@ def main() -> None:
                            Qt.ConnectionType.QueuedConnection)
 
     start_web_config()
-
-    # Wire alarm and timer callbacks to looping audio alerts.
-    from ui_backend.alarm_backend import get_manager as _alarm_mgr
-    from ui_backend.timer_backend import get_manager as _timer_mgr
-
-    def _on_alarm_fire(a) -> None:
-        kind = "wakeup" if a.repeat_daily else "alarm"
-        _audio.play_alert(kind)
-
-    _alarm_mgr().on_fire = _on_alarm_fire
-
-    # Compose with the timer widget's existing on_finish (which updates the UI row).
-    _timer_m = _timer_mgr()
-    _widget_finish = _timer_m.on_finish
-
-    def _on_timer_finish(t) -> None:
-        _audio.play_alert("timer")
-        if _widget_finish:
-            _widget_finish(t)
-
-    _timer_m.on_finish = _on_timer_finish
 
     window.showFullScreen()              # use .show() while developing
 
