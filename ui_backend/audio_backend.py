@@ -52,17 +52,30 @@ def _make_tone(path: Path, freq: float, duration: float, repeats: int = 1,
 
 
 def _make_klaxon(path: Path) -> None:
-    """Two-tone repeating klaxon: 3× (400 Hz / 800 Hz) pairs + trailing silence."""
+    """Star Wars Imperial klaxon: sawtooth two-tone alarm, 4 pairs + trailing silence."""
+    SR = _SAMPLE_RATE
     data: list[int] = []
-    for _ in range(3):
-        for freq in (400, 800):
-            dur = int(_SAMPLE_RATE * 0.18)
+    vol = 0.70
+
+    def _saw(freq: float, t: float) -> float:
+        # Sawtooth Fourier series — harsh, metallic quality
+        s = 0.0
+        for h in range(1, 9):
+            s += math.sin(2 * math.pi * freq * h * t) * ((-1) ** (h + 1)) / h
+        return s * (2 / math.pi)
+
+    for _ in range(4):
+        for freq in (880, 440):
+            dur = int(SR * 0.13)
             for n in range(dur):
-                t = n / _SAMPLE_RATE
-                env = 1.0 - max(0.0, (n - dur * 0.88)) / (dur * 0.12 + 1)
-                data.append(int(0.8 * 32767 * math.sin(2 * math.pi * freq * t) * env))
-        data.extend([0] * int(_SAMPLE_RATE * 0.12))
-    data.extend([0] * int(_SAMPLE_RATE * 0.5))
+                t = n / SR
+                attack  = min(n / int(SR * 0.005 + 1), 1.0)
+                release = 1.0 - max(0.0, (n - dur * 0.85)) / (dur * 0.15 + 1)
+                sample  = _saw(freq, t) * vol * attack * release
+                data.append(int(max(-32767, min(32767, sample * 32767))))
+        data.extend([0] * int(SR * 0.04))  # brief gap between cycles
+
+    data.extend([0] * int(SR * 0.4))  # silence before loop
     _write_wav(path, data)
 
 
@@ -81,8 +94,17 @@ def _make_wakeup_chime(path: Path) -> None:
     _write_wav(path, data)
 
 
+_SOUNDS_VERSION = 2   # bump to force regeneration of all sounds
+
 def _ensure_sounds() -> None:
     SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
+    ver_file = SOUNDS_DIR / ".version"
+    current_ver = int(ver_file.read_text().strip()) if ver_file.exists() else 0
+    if current_ver < _SOUNDS_VERSION:
+        for f in SOUNDS_DIR.glob("*.wav"):
+            f.unlink(missing_ok=True)
+        ver_file.write_text(str(_SOUNDS_VERSION))
+
     if not (SOUNDS_DIR / "klaxon.wav").exists():
         _make_klaxon(SOUNDS_DIR / "klaxon.wav")
     if not (SOUNDS_DIR / "wakeup_chime.wav").exists():

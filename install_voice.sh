@@ -3,11 +3,10 @@
 #
 # Installs:
 #   • RealtimeSTT  (Whisper speech recognition — wake word + commands)
-#   • piper-tts    (offline text-to-speech for spoken feedback)
 #
-# Does NOT install Ollama or any LLM model.
-# Voice commands (timers, lights, alarms, tasks) work without AI.
-# For AI responses to open-ended questions, run install_ai.sh after this.
+# Does NOT install piper-tts or Ollama.
+# Voice commands (timers, lights, alarms, tasks) work without TTS or AI.
+# For spoken responses:  bash install_ai.sh  (installs piper + Ollama LLM)
 #
 # Run from the project root:
 #   bash install_voice.sh
@@ -34,8 +33,8 @@ info "Using venv: $VENV_DIR"
 info "Installing CPU-only PyTorch and torchaudio..."
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-info "Installing RealtimeSTT and Piper TTS..."
-pip install RealtimeSTT piper-tts
+info "Installing RealtimeSTT (speech recognition)..."
+pip install RealtimeSTT
 
 # Pre-trust silero-vad so RealtimeSTT never hits the interactive y/n prompt.
 # Write the entry directly to PyTorch Hub's trusted_list file.
@@ -60,16 +59,17 @@ PYEOF
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
-echo "┌─────────────────────────────────────────────────────────┐"
-echo "│  Voice commands installed                               │"
-echo "│                                                         │"
-echo "│  Say 'Mirror' to activate, then:                        │"
-echo "│    Mirror, set a timer for 5 minutes                    │"
-echo "│    Mirror, turn on the lights                           │"
-echo "│    Mirror, set an alarm for 7am                         │"
-echo "│    Mirror, add buy milk to my task list                 │"
-echo "│                                                         │"
-echo "│  Restart the mirror app to enable voice control.        │"
-echo "│                                                         │"
-echo "│  For AI responses: bash install_ai.sh                   │"
-echo "└─────────────────────────────────────────────────────────┘"
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│  Voice commands installed (speech recognition only)          │"
+echo "│                                                              │"
+echo "│  Say 'Mirror' to activate, then:                             │"
+echo "│    Mirror, set a timer for 5 minutes                         │"
+echo "│    Mirror, turn on the lights                                │"
+echo "│    Mirror, set an alarm for 7am                              │"
+echo "│    Mirror, add buy milk to my task list                      │"
+echo "│                                                              │"
+echo "│  Restart the mirror app to enable voice control.             │"
+echo "│                                                              │"
+echo "│  For spoken AI responses: bash install_ai.sh                 │"
+echo "│  (installs piper TTS + Ollama LLM, downloads ~3-5 GB)        │"
+echo "└──────────────────────────────────────────────────────────────┘"

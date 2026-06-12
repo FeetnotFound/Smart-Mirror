@@ -1033,7 +1033,7 @@ main > .card.full-width {
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">Voice Commands</div>
-      <div class="field-hint" style="margin-bottom:10px">Wake word + commands for timers, lights, alarms, and tasks. Downloads ~1–2 GB (Whisper model). No GPU required.</div>
+      <div class="field-hint" style="margin-bottom:10px">Wake word + commands for timers, lights, alarms, and tasks. Downloads ~1–2 GB (Whisper model). No GPU required. No TTS included — install AI Responses for spoken replies.</div>
       <div id="voice-install-status" class="field-hint" style="margin-bottom:8px"></div>
       <button class="btn btn-accent" id="btn-install-voice" onclick="runInstall('install_voice.sh','btn-install-voice','voice-install-status')">
         Install Voice Commands
@@ -1041,11 +1041,19 @@ main > .card.full-width {
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">AI Responses</div>
-      <div class="field-hint" style="margin-bottom:10px">Adds conversational AI responses via Ollama. Downloads ~3–5 GB. GPU strongly recommended. Install Voice Commands first.</div>
+      <div class="field-hint" style="margin-bottom:10px">Adds conversational AI (Ollama) + spoken replies (piper TTS). Downloads ~3–5 GB. GPU strongly recommended. Install Voice Commands first.</div>
       <div id="ai-install-status" class="field-hint" style="margin-bottom:8px"></div>
       <button class="btn btn-accent" id="btn-install-ai" onclick="runInstall('install_ai.sh','btn-install-ai','ai-install-status')">
         Install AI Responses
       </button>
+      <div id="tts-toggle-row" style="display:none;margin-top:12px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                      color:var(--text-mid);font-size:13px">
+          <input type="checkbox" id="tts-enabled-chk" style="width:16px;height:16px"
+                 onchange="saveTtsEnabled()">
+          Speak responses aloud (piper TTS)
+        </label>
+      </div>
     </div>
   </div>
 
@@ -2341,8 +2349,29 @@ async function loadInstallStatus() {
       }
     }
 
+    // TTS toggle — show only if piper is installed
+    const ttsRow = document.getElementById("tts-toggle-row");
+    const ttsChk = document.getElementById("tts-enabled-chk");
+    if (data.piper_available && ttsRow && ttsChk) {
+      ttsRow.style.display = "block";
+      ttsChk.checked = data.tts_enabled !== false;
+    }
+
     if (polling) setTimeout(loadInstallStatus, 5000);
   } catch { /* ignore */ }
+}
+
+async function saveTtsEnabled() {
+  const chk = document.getElementById("tts-enabled-chk");
+  if (!chk) return;
+  try {
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tts_enabled: chk.checked }),
+    });
+    toast(chk.checked ? "TTS enabled" : "TTS disabled");
+  } catch { toast("Save failed", "err"); }
 }
 
 async function runInstall(script, btnId, statusId) {

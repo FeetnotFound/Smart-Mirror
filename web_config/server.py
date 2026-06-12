@@ -36,6 +36,7 @@ DB_PATH       = _ROOT / "ui_backend" / "data" / "calendar.db"
 _DEFAULTS: dict = {
     "mirror_name": "MIRROR",
     "calendar_days": 7,
+    "tts_enabled": True,
     "widgets": {
         "terminal": True,
         "calendar": True,
@@ -372,6 +373,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                         current["layout"] = data["layout"]
                     if "ai_model" in data:
                         current["ai_model"] = str(data["ai_model"])[:80]
+                    if "tts_enabled" in data:
+                        current["tts_enabled"] = bool(data["tts_enabled"])
                     if "widgets" in data:
                         for name, visible in data["widgets"].items():
                             if name in current["widgets"]:
@@ -571,7 +574,9 @@ def _install_status() -> dict:
     # the module is in sys.modules. Re-importing RealtimeSTT directly is
     # unreliable (CUDA side-effects, package name variations, etc.)
     import importlib.util
-    statuses["voice_available"] = importlib.util.find_spec("RealtimeSTT") is not None
+    statuses["voice_available"]  = importlib.util.find_spec("RealtimeSTT") is not None
+    statuses["piper_available"]  = importlib.util.find_spec("piper") is not None
+    statuses["tts_enabled"]      = load_settings().get("tts_enabled", True)
     try:
         import urllib.request as _ur
         with _ur.urlopen("http://localhost:11434/api/tags", timeout=2) as r:

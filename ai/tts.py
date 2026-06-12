@@ -1,6 +1,8 @@
+import json
 import queue
 import threading
 import subprocess
+from pathlib import Path
 from typing import Callable, Iterable, Optional
 
 from config import VOICE, RESET, ts
@@ -22,9 +24,25 @@ _Q_AUDIO = "a"    # audio chunk message
 _Q_TEXT  = "t"    # sentence-text message  (fires on_sentence on consumer side)
 _Q_DONE  = "d"    # sentinel
 
+_SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
+
+# aplay args for raw PCM from piper — 500 ms buffer reduces underruns on Pi
+_APLAY = ["aplay", "-r", "22050", "-f", "S16_LE", "-c", "1", "-t", "raw",
+          "-B", "500000"]
+
+
+def _tts_enabled() -> bool:
+    try:
+        data = json.loads(_SETTINGS_PATH.read_text())
+        return bool(data.get("tts_enabled", True))
+    except Exception:
+        return True
+
 
 def speak(text: str, model: int) -> None:
-    """Single-shot TTS for short system messages."""
+    """Single-shot TTS for short system messages. Skipped if TTS is disabled."""
+    if not _tts_enabled():
+        return
     model_path = _MODEL_MAP.get(model)
     if model_path is None:
         print(f"{ts()}{VOICE}[Voice] Unknown model ID: {model}{RESET}")
@@ -38,8 +56,7 @@ def speak(text: str, model: int) -> None:
         raw_audio, _ = piper.communicate(input=text.encode())
         print(f"{ts()}{VOICE}[Voice] Playing voice {model}{RESET}")
         aplay = subprocess.Popen(
-            ["aplay", "-r", "22050", "-f", "S16_LE", "-c", "1", "-t", "raw"],
-            stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            _APLAY, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
         )
         aplay.communicate(input=raw_audio)
     except FileNotFoundError as e:
@@ -76,6 +93,8 @@ def speak_sentences(
     for a sentence is dequeued — text and voice appear in sync instead of
     text appearing ~500 ms before voice.
     """
+    if not _tts_enabled():
+        return ""
     model_path = _MODEL_MAP.get(model)
     if model_path is None:
         print(f"{ts()}{VOICE}[Voice] Unknown model ID: {model}{RESET}")
@@ -134,8 +153,7 @@ def speak_sentences(
     print(f"{ts()}{VOICE}[Voice] Opening output (voice {model}){RESET}")
 
     aplay = subprocess.Popen(
-        ["aplay", "-r", "22050", "-f", "S16_LE", "-c", "1", "-t", "raw"],
-        stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        _APLAY, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
     )
 
     first_audio = True
