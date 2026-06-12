@@ -169,15 +169,14 @@ def play_alert(kind: str) -> None:
 
 
 def _pick_wav(kind: str) -> Path:
-    if kind == "wakeup":
-        return SOUNDS_DIR / "wakeup_chime.wav"
-    # Alarm / timer: check for user-supplied custom file first.
-    # Drop sounds/klaxon_custom.wav (or .mp3 / .ogg) to use your own sound.
+    # Check for user-supplied custom klaxon first.
+    # Drop sounds/klaxon_custom.wav (or .mp3 / .ogg / .flac) to use your own.
     for ext in ("wav", "mp3", "ogg", "flac"):
         custom = SOUNDS_DIR / f"klaxon_custom.{ext}"
         if custom.exists():
             return custom
-    return SOUNDS_DIR / "klaxon.wav"
+    # No custom file → always use the gentle ascending chime
+    return SOUNDS_DIR / "wakeup_chime.wav"
 
 
 def stop_alert() -> None:
