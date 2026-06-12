@@ -319,7 +319,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         try:
             from ui_backend.audio_backend import list_sounds
             files    = list_sounds()
-            selected = _load_settings().get("alarm_sound", "")
+            selected = load_settings().get("alarm_sound", "")
             self._send_json({"files": files, "selected": selected})
         except Exception as e:
             print(f"[sounds] ERROR: {e}\n{traceback.format_exc()}", flush=True)
