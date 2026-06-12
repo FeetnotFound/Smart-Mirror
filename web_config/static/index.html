@@ -93,16 +93,22 @@ header {
 main {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--gap);
-  align-items: start;
+  padding: 20px;
+  columns: 3;
+  column-gap: var(--gap);
 }
 
-/* Full-width cards that shouldn't be split across columns */
+@media (max-width: 1060px) { main { columns: 2; } }
+@media (max-width:  680px) { main { columns: 1; } }
+
+main > .card {
+  break-inside: avoid;
+  margin-bottom: var(--gap);
+}
+
+/* Full-width cards span all columns */
 main > .card.full-width {
-  grid-column: 1 / -1;
+  column-span: all;
 }
 
 /* ── Card ────────────────────────────────────────────────────────────────── */
