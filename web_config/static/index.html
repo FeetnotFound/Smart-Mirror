@@ -962,6 +962,17 @@ main > .card.full-width {
       </div>
     </div>
     <div class="field-group" style="border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:6px">Alert Sound</div>
+      <div class="field-hint" style="margin-bottom:8px">Drop audio files into <code>sounds/</code> via SCP then click ↺ to refresh the list.</div>
+      <div class="field-row" style="gap:8px">
+        <select id="alarm-sound" class="field-input" style="flex:1">
+          <option value="">Built-in ascending chime</option>
+        </select>
+        <button class="btn" onclick="loadSounds()" title="Refresh file list">↺</button>
+        <button class="btn btn-accent" onclick="saveAlarmSound()">Save</button>
+      </div>
+    </div>
+    <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:6px">Alert Volume</div>
       <div class="field-hint" style="margin-bottom:8px">Volume for alarms, timers, and wakeup chimes. AirPlay music uses its own volume slider.</div>
       <div class="field-row" style="gap:12px;align-items:center">
@@ -1169,6 +1180,7 @@ async function init() {
     _timerPoll = setInterval(loadTimers, 5_000);
     setInterval(loadAlarms, 30_000);
     setInterval(pollAlertStatus, 3_000);
+    loadSounds();
     loadModels();
     loadInstallStatus();
     checkUpdate();
@@ -1359,6 +1371,39 @@ async function saveSchedule() {
     const data = await res.json();
     if (data.ok) toast("Schedule saved");
     else         toast("Error saving schedule", "err");
+  } catch {
+    toast("Save failed", "err");
+  }
+}
+
+async function loadSounds() {
+  const sel = document.getElementById("alarm-sound");
+  try {
+    const res  = await fetch("/api/sounds");
+    const data = await res.json();
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Built-in ascending chime</option>';
+    for (const f of data.files) {
+      const opt = document.createElement("option");
+      opt.value = f;
+      opt.textContent = f;
+      sel.appendChild(opt);
+    }
+    sel.value = data.selected || "";
+  } catch { /* ignore */ }
+}
+
+async function saveAlarmSound() {
+  const val = document.getElementById("alarm-sound").value;
+  try {
+    const res  = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alarm_sound: val }),
+    });
+    const data = await res.json();
+    if (data.ok) toast(val ? `Sound set to ${val}` : "Sound set to built-in chime");
+    else         toast("Error saving", "err");
   } catch {
     toast("Save failed", "err");
   }

@@ -47,6 +47,7 @@ def _load_settings() -> dict:
         "stt_enabled": True,
         "alsa_device": "",
         "alarm_volume": 0.5,
+        "alarm_sound":  "",
         "widgets": {
             "terminal": True, "calendar": True, "tasks": True,
             "clock":    True, "next_up":  True, "timer": True,

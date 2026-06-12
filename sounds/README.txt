@@ -1,6 +1,11 @@
-Drop your custom alarm sound here:
+Drop any audio files here to make them selectable as alert sounds.
 
-  klaxon_custom.wav   (or .mp3 / .ogg / .flac)
+Supported formats: .wav  .mp3  .ogg  .flac  .aac  .m4a
 
-If this file exists it will be used for all alarm and timer alerts.
-If it does not exist, the built-in ascending chime plays instead.
+Example — copy a file from your computer:
+  scp my_alarm.mp3 mirror@mirror.local:~/mirror/sounds/
+
+Then open the web config, go to the Schedule card → Alert Sound,
+click ↺ to refresh the list, choose your file, and click Save.
+
+Selecting "Built-in ascending chime" uses the auto-generated chime.

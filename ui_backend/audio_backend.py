@@ -30,6 +30,10 @@ def _alsa_device() -> str:
         return ""
 
 
+_BUILTIN_SOUNDS = {"klaxon.wav", "wakeup_chime.wav", "alarm.wav", "timer.wav", "wakeup.wav"}
+_AUDIO_EXTS     = {".wav", ".mp3", ".ogg", ".flac", ".aac", ".m4a"}
+
+
 def _alarm_volume() -> float:
     """Return alarm_volume (0.0–1.0, default 0.5 = current built-in loudness)."""
     try:
@@ -38,6 +42,19 @@ def _alarm_volume() -> float:
         return max(0.0, min(1.0, v))
     except Exception:
         return 0.5
+
+
+def list_sounds() -> list[str]:
+    """Return sorted list of user-supplied audio filenames in sounds/."""
+    try:
+        return sorted(
+            f.name for f in SOUNDS_DIR.iterdir()
+            if f.is_file()
+            and f.suffix.lower() in _AUDIO_EXTS
+            and f.name not in _BUILTIN_SOUNDS
+        )
+    except Exception:
+        return []
 _SAMPLE_RATE = 44100
 
 # ── Alert state ───────────────────────────────────────────────────────────────
@@ -195,13 +212,15 @@ def play_alert(kind: str) -> None:
 
 
 def _pick_wav(kind: str) -> Path:
-    # Check for user-supplied custom klaxon first.
-    # Drop sounds/klaxon_custom.wav (or .mp3 / .ogg / .flac) to use your own.
-    for ext in ("wav", "mp3", "ogg", "flac"):
-        custom = SOUNDS_DIR / f"klaxon_custom.{ext}"
-        if custom.exists():
-            return custom
-    # No custom file → always use the gentle ascending chime
+    try:
+        data   = json.loads(_SETTINGS_PATH.read_text())
+        chosen = str(data.get("alarm_sound", "")).strip()
+        if chosen:
+            p = SOUNDS_DIR / chosen
+            if p.exists():
+                return p
+    except Exception:
+        pass
     return SOUNDS_DIR / "wakeup_chime.wav"
 
 

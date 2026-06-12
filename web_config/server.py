@@ -41,6 +41,7 @@ _DEFAULTS: dict = {
     "stt_enabled":  True,
     "alsa_device":  "",
     "alarm_volume": 0.5,
+    "alarm_sound":  "",
     "widgets": {
         "terminal": True,
         "calendar": True,
@@ -148,6 +149,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/timers":        self._get_timers()
             elif path == "/api/alarms":        self._get_alarms()
             elif path == "/api/alerts/active": self._get_alert_active()
+            elif path == "/api/sounds":        self._get_sounds()
             elif path == "/api/light-groups":  self._get_light_groups()
             elif path == "/api/lights/control": self._send_json({"error": "POST only"}, 405)
             elif path == "/api/plugs/control":  self._send_json({"error": "POST only"}, 405)
@@ -312,6 +314,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json({"error": str(e)}, 500)
 
+    def _get_sounds(self):
+        from ui_backend.audio_backend import list_sounds
+        selected = _load_settings().get("alarm_sound", "")
+        self._send_json({"files": list_sounds(), "selected": selected})
+
     def _get_alert_active(self):
         try:
             from ui_backend.audio_backend import is_alert_active
@@ -384,6 +391,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                     if "alarm_volume" in data:
                         v = float(data["alarm_volume"])
                         current["alarm_volume"] = round(max(0.0, min(1.0, v)), 2)
+                    if "alarm_sound" in data:
+                        current["alarm_sound"] = str(data["alarm_sound"]).strip()[:128]
                     if "stt_enabled" in data:
                         enabled = bool(data["stt_enabled"])
                         current["stt_enabled"] = enabled
