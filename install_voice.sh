@@ -31,11 +31,32 @@ info "Using venv: $VENV_DIR"
 # ── Python packages ───────────────────────────────────────────────────────────
 # Install CPU-only PyTorch first so RealtimeSTT doesn't pull in CUDA (multi-GB,
 # useless on Pi/non-NVIDIA hardware).
-info "Installing CPU-only PyTorch..."
-pip install torch --index-url https://download.pytorch.org/whl/cpu
+info "Installing CPU-only PyTorch and torchaudio..."
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 info "Installing RealtimeSTT and Piper TTS..."
 pip install RealtimeSTT piper-tts
+
+# Pre-trust silero-vad so RealtimeSTT never hits the interactive y/n prompt.
+# Write the entry directly to PyTorch Hub's trusted_list file.
+info "Pre-trusting silero-vad for PyTorch Hub..."
+python3 - <<'PYEOF'
+import torch, os, sys
+try:
+    hub_dir = torch.hub.get_dir()
+    os.makedirs(hub_dir, exist_ok=True)
+    trusted_file = os.path.join(hub_dir, "trusted_list")
+    existing = open(trusted_file).read() if os.path.exists(trusted_file) else ""
+    entries = ["snakers4/silero-vad", "snakers4_silero-vad_master", "snakers4_silero-vad_main"]
+    with open(trusted_file, "a") as f:
+        for entry in entries:
+            if entry not in existing:
+                f.write(entry + "\n")
+    torch.hub.load("snakers4/silero-vad", "silero_vad", trust_repo=True, verbose=False)
+    print("[install_voice] silero-vad trusted and cached OK")
+except Exception as e:
+    print(f"[install_voice] warning: silero-vad pre-cache failed: {e}", file=sys.stderr)
+PYEOF
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""

@@ -365,11 +365,26 @@ def main() -> None:
 
     start_web_config()
 
-    # Wire alarm and timer callbacks to audio playback.
+    # Wire alarm and timer callbacks to looping audio alerts.
     from ui_backend.alarm_backend import get_manager as _alarm_mgr
     from ui_backend.timer_backend import get_manager as _timer_mgr
-    _alarm_mgr().on_fire   = lambda _a: _audio.play("alarm.wav")
-    _timer_mgr().on_finish = lambda _t: _audio.play("timer.wav")
+
+    def _on_alarm_fire(a) -> None:
+        kind = "wakeup" if a.repeat_daily else "alarm"
+        _audio.play_alert(kind)
+
+    _alarm_mgr().on_fire = _on_alarm_fire
+
+    # Compose with the timer widget's existing on_finish (which updates the UI row).
+    _timer_m = _timer_mgr()
+    _widget_finish = _timer_m.on_finish
+
+    def _on_timer_finish(t) -> None:
+        _audio.play_alert("timer")
+        if _widget_finish:
+            _widget_finish(t)
+
+    _timer_m.on_finish = _on_timer_finish
 
     window.showFullScreen()              # use .show() while developing
 

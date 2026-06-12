@@ -142,6 +142,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/update/check":  self._get_update_check()
             elif path == "/api/timers":        self._get_timers()
             elif path == "/api/alarms":        self._get_alarms()
+            elif path == "/api/alerts/active": self._get_alert_active()
             elif path == "/api/light-groups":  self._get_light_groups()
             elif path == "/api/lights/control": self._send_json({"error": "POST only"}, 405)
             elif path == "/api/plugs/control":  self._send_json({"error": "POST only"}, 405)
@@ -298,24 +299,34 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         try:
             from ui_backend.alarm_backend import get_manager
             alarms = [
-                {"id": a.id, "label": a.label, "target_iso": a.target_iso}
+                {"id": a.id, "label": a.label, "target_iso": a.target_iso,
+                 "repeat_daily": a.repeat_daily}
                 for a in get_manager().active()
             ]
             self._send_json(alarms)
         except Exception as e:
             self._send_json({"error": str(e)}, 500)
 
+    def _get_alert_active(self):
+        try:
+            from ui_backend.audio_backend import is_alert_active
+            self._send_json({"active": is_alert_active()})
+        except Exception as e:
+            self._send_json({"active": False})
+
     def _post_alarm(self, data: dict):
-        time_str = str(data.get("time",  "")).strip()
-        label    = str(data.get("label", "")).strip()
+        time_str     = str(data.get("time",  "")).strip()
+        label        = str(data.get("label", "")).strip()
+        repeat_daily = bool(data.get("repeat_daily", False))
         if not time_str:
             self._send_json({"ok": False, "error": "time required"}, 400)
             return
         try:
             from ui_backend.alarm_backend import get_manager
-            a = get_manager().set_alarm(time_str, label)
+            a = get_manager().set_alarm(time_str, label, repeat_daily=repeat_daily)
             human = a.target.strftime("%-I:%M %p")
-            self._send_json({"ok": True, "id": a.id, "human": human})
+            self._send_json({"ok": True, "id": a.id, "human": human,
+                             "repeat_daily": repeat_daily})
         except ValueError as e:
             self._send_json({"ok": False, "error": str(e)}, 400)
         except Exception as e:
@@ -326,6 +337,14 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             from ui_backend.alarm_backend import get_manager
             ok = get_manager().cancel(int(data.get("id", 0)))
             self._send_json({"ok": ok})
+        except Exception as e:
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def _dismiss_alert(self):
+        try:
+            from ui_backend.audio_backend import stop_alert
+            stop_alert()
+            self._send_json({"ok": True})
         except Exception as e:
             self._send_json({"ok": False, "error": str(e)}, 500)
 
@@ -389,10 +408,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 _emit("refresh", "calendar")
                 self._send_json({"ok": True})
 
-            elif path == "/api/timers":        self._post_timer(data)
-            elif path == "/api/timers/cancel": self._cancel_timer(data)
-            elif path == "/api/alarms":        self._post_alarm(data)
-            elif path == "/api/alarms/cancel": self._cancel_alarm(data)
+            elif path == "/api/timers":          self._post_timer(data)
+            elif path == "/api/timers/cancel":   self._cancel_timer(data)
+            elif path == "/api/alarms":          self._post_alarm(data)
+            elif path == "/api/alarms/cancel":   self._cancel_alarm(data)
+            elif path == "/api/alerts/dismiss":  self._dismiss_alert()
             elif path == "/api/light-groups":       self._post_light_group(data)
             elif path == "/api/lights/control":     self._control_light(data)
             elif path == "/api/plugs/control":      self._control_plug(data)
@@ -571,13 +591,27 @@ def _run_install(script_name: str) -> str:
         if _install_procs[script_name].poll() is None:
             return "already running"
     log_path = _ROOT / f".{script_name}.log"
-    proc = subprocess.Popen(
-        ["bash", str(script)],
-        stdout=open(log_path, "w"),
-        stderr=subprocess.STDOUT,
-        env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"},
-    )
-    _install_procs[script_name] = proc
+    import getpass
+    current_user = getpass.getuser()
+    def _run():
+        proc = subprocess.Popen(
+            ["bash", str(script)],
+            stdout=open(log_path, "w"),
+            stderr=subprocess.STDOUT,
+            env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"},
+        )
+        _install_procs[script_name] = proc
+        proc.wait()
+        # Fix any root-owned files left by pip/apt running under sudo
+        subprocess.run(
+            ["sudo", "chown", "-R", f"{current_user}:{current_user}", str(_ROOT)],
+            capture_output=True,
+        )
+    import threading
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    # Give the thread a moment to set _install_procs before returning
+    import time; time.sleep(0.2)
     return "started"
 
 

@@ -33,14 +33,11 @@ class AlarmWidget(BaseWidget):
         self._rows.clear()
 
         alarms = sorted(get_manager().active(), key=lambda a: a.target)
-        entries = alarms or [None]
-        for a in entries:
+        for a in alarms:
             lbl = FitLabel(max_pt=28)
             lbl.setStyleSheet("color: #dddddd; " + TRANS)
-            if a is None:
-                lbl.setText("none")
-            else:
-                t = a.target.strftime("%I:%M %p").lstrip("0")
-                lbl.setText(f"{t}  {a.label}")
+            t = a.target.strftime("%I:%M %p").lstrip("0")
+            suffix = "  ↻" if a.repeat_daily else ""
+            lbl.setText(f"{t}  {a.label}{suffix}")
             self._rows.append(lbl)
             self._layout.addWidget(lbl)

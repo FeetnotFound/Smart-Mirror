@@ -100,8 +100,9 @@ general = {
 };
 
 alsa = {
-    output_device = "pipewire";   // PipeWire ALSA sink
-    mixer_control_name = "Master";
+    output_device = "pipewire";   // PipeWire ALSA sink; change to plughw:N,0 for direct ALSA
+    // mixer_control_name = "Master";  // omit if sound card has no hardware controls (e.g. AIY Voice HAT)
+    audio_backend_buffer_desired_length_in_seconds = 0.5;
 };
 
 dbus_interface = "standard";

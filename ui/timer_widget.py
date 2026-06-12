@@ -1,5 +1,5 @@
 """Timer widget — live countdown. 440×210, text auto-fits width."""
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QVBoxLayout, QLabel
 
@@ -47,3 +47,4 @@ class TimerWidget(BaseWidget):
         if row:
             row.setText(f"{label}  done")
             row.setStyleSheet("color: #006688; " + TRANS)
+            QTimer.singleShot(5000, row.deleteLater)

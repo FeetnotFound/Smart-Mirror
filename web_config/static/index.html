@@ -979,6 +979,10 @@ main > .card.full-width {
       <span class="card-title">Alarms</span>
       <span class="badge badge-live">live</span>
     </div>
+    <div id="alert-dismiss-row" style="display:none;margin-bottom:10px">
+      <button class="btn btn-accent" style="width:100%;background:#cc3333"
+              onclick="dismissAlert()">⏹ Dismiss Alert</button>
+    </div>
     <div id="alarms-list"><div class="empty">Loading…</div></div>
     <div class="field-group" style="border-top:1px solid var(--border)">
       <div class="field-label" style="margin-bottom:10px">New Alarm</div>
@@ -989,6 +993,11 @@ main > .card.full-width {
                style="flex:2;min-width:100px" autocomplete="off">
         <button class="btn btn-accent" onclick="setAlarm()">Set</button>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;
+                    color:var(--text-mid);font-size:13px;cursor:pointer">
+        <input type="checkbox" id="alarm-repeat-daily" style="width:16px;height:16px">
+        Repeat daily
+      </label>
     </div>
   </div>
 
@@ -1113,10 +1122,12 @@ async function init() {
     renderSchedule(_settings.schedule || {});
     loadTimers();
     loadAlarms();
-    // Refresh timer countdowns every 5 s; alarms every 30 s
+    pollAlertStatus();
+    // Refresh timer countdowns every 5 s; alarms every 30 s; alert status every 3 s
     clearInterval(_timerPoll);
     _timerPoll = setInterval(loadTimers, 5_000);
     setInterval(loadAlarms, 30_000);
+    setInterval(pollAlertStatus, 3_000);
     loadModels();
     loadInstallStatus();
     checkUpdate();
@@ -1416,9 +1427,11 @@ function renderAlarms(alarms) {
   alarms.forEach(a => {
     const row = document.createElement("div");
     row.className = "item-row";
+    const dailyBadge = a.repeat_daily
+      ? `<span style="font-size:11px;color:#aaa;margin-left:6px">↻ daily</span>` : "";
     row.innerHTML = `
       <div class="item-info">
-        <div class="item-primary">${esc(_fmtAlarmTime(a.target_iso))}</div>
+        <div class="item-primary">${esc(_fmtAlarmTime(a.target_iso))}${dailyBadge}</div>
         ${a.label ? `<div class="item-sub">${esc(a.label)}</div>` : ""}
       </div>
       <button class="btn-cancel" onclick="cancelAlarm(${a.id})">Cancel</button>`;
@@ -1427,19 +1440,22 @@ function renderAlarms(alarms) {
 }
 
 async function setAlarm() {
-  const time  = document.getElementById("alarm-time").value;
-  const label = document.getElementById("alarm-label").value.trim();
+  const time        = document.getElementById("alarm-time").value;
+  const label       = document.getElementById("alarm-label").value.trim();
+  const repeatDaily = document.getElementById("alarm-repeat-daily").checked;
   if (!time) { toast("Pick a time", "info"); return; }
   try {
     const res  = await fetch("/api/alarms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ time, label }),
+      body: JSON.stringify({ time, label, repeat_daily: repeatDaily }),
     });
     const data = await res.json();
     if (data.ok) {
-      toast(`Alarm set for ${data.human}`);
+      const suffix = repeatDaily ? " (repeats daily)" : "";
+      toast(`Alarm set for ${data.human}${suffix}`);
       document.getElementById("alarm-label").value = "";
+      document.getElementById("alarm-repeat-daily").checked = false;
       loadAlarms();
     } else {
       toast(data.error || "Could not set alarm", "err");
@@ -1456,6 +1472,26 @@ async function cancelAlarm(id) {
     body: JSON.stringify({ id }),
   });
   loadAlarms();
+}
+
+async function dismissAlert() {
+  try {
+    await fetch("/api/alerts/dismiss", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: "{}" });
+    toast("Alert dismissed");
+    document.getElementById("alert-dismiss-row").style.display = "none";
+  } catch {
+    toast("Could not dismiss alert", "err");
+  }
+}
+
+async function pollAlertStatus() {
+  try {
+    const res  = await fetch("/api/alerts/active");
+    const data = await res.json();
+    document.getElementById("alert-dismiss-row").style.display =
+      data.active ? "block" : "none";
+  } catch { /* ignore */ }
 }
 
 // ── Font colors ───────────────────────────────────────────────────────────────

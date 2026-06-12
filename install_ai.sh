@@ -38,8 +38,8 @@ info "Using venv: $VENV_DIR"
 
 # ── 2. Python AI packages ─────────────────────────────────────────────────────
 # Install CPU-only PyTorch first so RealtimeSTT doesn't pull in CUDA.
-info "Installing CPU-only PyTorch..."
-pip install torch --index-url https://download.pytorch.org/whl/cpu
+info "Installing CPU-only PyTorch and torchaudio..."
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 info "Installing RealtimeSTT and Piper TTS..."
 pip install RealtimeSTT piper-tts
