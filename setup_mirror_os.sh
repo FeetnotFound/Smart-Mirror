@@ -55,7 +55,8 @@ apt-get install -y \
   avahi-daemon avahi-utils libnss-mdns \
   openssh-server \
   alsa-utils portaudio19-dev libdbus-1-dev \
-  ca-certificates curl \
+  libcap2-bin \
+  ca-certificates curl git \
   unclutter   # hides the mouse cursor after a short idle
 
 # ── 2. Create mirror user ─────────────────────────────────────────────────────

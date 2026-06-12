@@ -43,6 +43,8 @@ def _load_settings() -> dict:
     defaults: dict = {
         "mirror_name": "MIRROR",
         "calendar_days": 7,
+        "tts_enabled": True,
+        "stt_enabled": True,
         "widgets": {
             "terminal": True, "calendar": True, "tasks": True,
             "clock":    True, "next_up":  True, "timer": True,

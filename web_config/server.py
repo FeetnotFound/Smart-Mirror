@@ -1,7 +1,8 @@
 """Web config server — runs in a background daemon thread alongside the Qt app.
 
 Uses Python's built-in http.server (no Flask) to avoid threading conflicts with
-the Qt event loop. Access from any device on the same network at port 5000.
+the Qt event loop. Binds to port 80 (requires cap_net_bind_service on the
+Python binary) with automatic fallback to 8080, 8888, 5001, 5002.
 """
 import http.server
 import json
