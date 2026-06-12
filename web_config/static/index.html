@@ -1393,17 +1393,21 @@ async function loadSounds() {
   const sel = document.getElementById("alarm-sound");
   try {
     const res  = await fetch("/api/sounds");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const prev = sel.value;
     sel.innerHTML = '<option value="">Built-in ascending chime</option>';
-    for (const f of data.files) {
+    const files = Array.isArray(data.files) ? data.files : [];
+    for (const f of files) {
       const opt = document.createElement("option");
       opt.value = f;
       opt.textContent = f;
       sel.appendChild(opt);
     }
     sel.value = data.selected || "";
-  } catch { /* ignore */ }
+    toast(files.length ? `${files.length} sound file${files.length > 1 ? "s" : ""} found` : "No custom sound files found");
+  } catch (e) {
+    toast("Could not load sounds: " + e.message, "err");
+  }
 }
 
 async function saveAlarmSound() {
