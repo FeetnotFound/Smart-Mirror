@@ -1393,7 +1393,8 @@ async function loadSounds() {
   const sel = document.getElementById("alarm-sound");
   try {
     const res  = await fetch("/api/sounds");
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); } catch { throw new Error(`HTTP ${res.status} (bad response body)`); }
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     sel.innerHTML = '<option value="">Built-in ascending chime</option>';
     const files = Array.isArray(data.files) ? data.files : [];

@@ -315,9 +315,15 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self._send_json({"error": str(e)}, 500)
 
     def _get_sounds(self):
-        from ui_backend.audio_backend import list_sounds
-        selected = _load_settings().get("alarm_sound", "")
-        self._send_json({"files": list_sounds(), "selected": selected})
+        import traceback
+        try:
+            from ui_backend.audio_backend import list_sounds
+            files    = list_sounds()
+            selected = _load_settings().get("alarm_sound", "")
+            self._send_json({"files": files, "selected": selected})
+        except Exception as e:
+            print(f"[sounds] ERROR: {e}\n{traceback.format_exc()}", flush=True)
+            self._send_json({"files": [], "selected": "", "error": str(e)}, 500)
 
     def _get_alert_active(self):
         try:
@@ -402,6 +408,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                             if name in current["widgets"]:
                                 current["widgets"][name] = bool(visible)
                                 _emit("show" if visible else "hide", name)
+                    schedule_changed = False
                     if "schedule" in data and isinstance(data["schedule"], dict):
                         sch = data["schedule"]
                         cur_sch = current.setdefault("schedule", {})
@@ -413,8 +420,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                             cur_sch["wake_time"] = str(sch["wake_time"])[:5]
                         if "wakeup_sound" in sch:
                             cur_sch["wakeup_sound"] = bool(sch["wakeup_sound"])
+                        schedule_changed = True
                     save_settings(current)
                 _emit("reload")
+                if schedule_changed:
+                    _emit("schedule")
                 self._send_json({"ok": True})
 
             elif path == "/api/calendar-colors":

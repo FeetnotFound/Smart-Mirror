@@ -287,6 +287,10 @@ class MirrorWindow(QMainWindow):
             self._rebuild_ui()
             print("[UI] layout rebuilt from settings")
             return
+        if action == "schedule":
+            if _schedule_watcher is not None:
+                _schedule_watcher._tick()
+            return
         if action == "stt_start":
             self._start_stt()
             return
@@ -348,6 +352,8 @@ class MirrorWindow(QMainWindow):
         sys.stdout = sys.__stdout__        # restore original stdout
         event.accept()
 
+
+_schedule_watcher: "_ScheduleWatcher | None" = None
 
 # ── Display schedule watcher ──────────────────────────────────────────────────
 
@@ -414,7 +420,8 @@ def main() -> None:
     window.showFullScreen()              # use .show() while developing
 
     # Start the display schedule watcher (kept alive by the event loop).
-    _schedule = _ScheduleWatcher()      # noqa: F841
+    global _schedule_watcher
+    _schedule_watcher = _ScheduleWatcher()
 
     if _AI_AVAILABLE and _load_settings().get("stt_enabled", True):
         preload_models()
